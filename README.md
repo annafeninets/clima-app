@@ -1,6 +1,6 @@
 # weather-outfit-bot
 
-# Clima — Vision
+# Clima App — Vision
 
 ## Предметная область
 
