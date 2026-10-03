@@ -35,9 +35,11 @@ uv sync
 uv run clima
 ```
 
-По умолчанию API доступен на `http://127.0.0.1:8000`. Переменные `CLIMA_HOST`, `CLIMA_PORT`, `CLIMA_DB_PATH` и `CLIMA_UPLOADS_PATH` задают адрес сервера и места хранения. Закрытые маршруты требуют заголовок `Authorization: Bearer <token>`. Регистрация и вход принимают JSON с `login`, `password` и (для регистрации) `confirm`.
+По умолчанию API доступен на `http://127.0.0.1:8000`; `GET /health` проверяет доступность. Переменные `CLIMA_HOST`, `CLIMA_PORT`, `CLIMA_DB_PATH`, `CLIMA_UPLOADS_PATH` и `CLIMA_CORS_ORIGINS` задают адрес, хранилища и разрешённые CORS-origin. Регистрация принимает JSON с `login`, `password` и `confirm`; вход — с `login` и `password`. Защищённые маршруты требуют заголовок `Authorization: Bearer <token>`.
 
-Основные маршруты: `/auth/register`, `/auth/login`, `/profile`, `/settings`, `/wardrobe`, `/wardrobe/items`, `/outfits/plan`, `/outfits/today`, `/outfits/history` и `/favorites`. Закрытые запросы передают токен сессии в заголовке `Authorization` по схеме Bearer. Фото передаётся как base64-строка в JSON. Прогноз загружается через Open-Meteo. Push доставляется через Web Push; для него настройте `CLIMA_VAPID_PRIVATE_KEY` и `CLIMA_VAPID_SUBJECT`. Фоновый планировщик автоматически проверяет локальное время уведомлений; ручной запуск рассылки доступен через `POST /internal/scheduler/morning` с заголовком `X-Scheduler-Token` (секрет задаётся переменной `CLIMA_SCHEDULER_TOKEN`).
+Маршруты сгруппированы по авторизации (`/auth/*`), профилю и настройкам (`/profile`, `/settings`, `/push/subscriptions`, `/account`), гардеробу (`/wardrobe/*`), подбору и истории (`/outfits/*`), избранному (`/favorites/*`) и внутреннему планировщику (`/internal/scheduler/morning`). После `POST /wardrobe/items` клиент получает путь сохранённого фото и передаёт его вместе с характеристиками в `PUT /wardrobe/items/draft`. Фото можно отправлять base64 в JSON или бинарным телом `application/octet-stream`; поддерживаются PNG, JPEG, GIF и WebP размером до 5 МБ. Прогноз загружается через Open-Meteo; недавний сохранённый прогноз используется при временном сбое сервиса. Для Web Push задайте `CLIMA_VAPID_PRIVATE_KEY` и `CLIMA_VAPID_SUBJECT`. Фоновый планировщик проверяет локальное время уведомлений; ручной запуск доступен через `POST /internal/scheduler/morning` с заголовком `X-Scheduler-Token`, заданным через `CLIMA_SCHEDULER_TOKEN`.
+
+Backend сохраняет фото и проверенные пользователем характеристики вещей. Автоматическое распознавание типа, цвета и других характеристик по фотографии пока не реализовано: в UML и конфигурации проекта не задан поставщик или модель распознавания.
 
 Проверка backend-тестов: `uv run python -m unittest discover -s tests -v`.
 

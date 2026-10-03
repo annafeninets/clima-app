@@ -57,8 +57,13 @@ class WardrobeController:
     def updateItemPhoto(self, userId: int, itemId: int, photo: bytes) -> Item:
         item = self._ownedItem(userId, itemId)
         old_photo = item.photo
-        item.setPhoto(self.photoStorage.save(userId, photo))
-        self.itemsRepository.update(item)
+        new_photo = self.photoStorage.save(userId, photo)
+        item.setPhoto(new_photo)
+        try:
+            self.itemsRepository.update(item)
+        except Exception:
+            self.photoStorage.delete(new_photo)
+            raise
         if old_photo:
             self.photoStorage.delete(old_photo)
         return item

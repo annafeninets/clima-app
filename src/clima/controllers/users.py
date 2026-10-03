@@ -21,7 +21,11 @@ class AuthController:
         return None
 
     def register(self, login: str, password: str, confirm: str) -> Session:
+        if not isinstance(login, str) or not isinstance(password, str) or not isinstance(confirm, str):
+            raise ValidationError("Логин и пароль должны быть строками")
         login = login.strip()
+        if len(login) > 254 or len(password) > 1024:
+            raise ValidationError("Логин или пароль слишком длинный")
         if password != confirm:
             raise ValidationError(Messages.PASSWORD_MISMATCH)
         if len(password) < 8:
@@ -30,7 +34,7 @@ class AuthController:
         phone = self._normalizePhone(login) if email is None else None
         if email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
             raise ValidationError("Укажите корректный email")
-        if phone and len(re.sub(r"\D", "", phone)) < 7:
+        if phone and not 7 <= len(re.sub(r"\D", "", phone)) <= 15:
             raise ValidationError("Укажите корректный номер телефона")
         if self.usersRepository.findByEmailOrPhone(email or phone or login):
             raise ValidationError(Messages.ACCOUNT_EXISTS)
@@ -43,6 +47,8 @@ class AuthController:
         return self._newSession(user)
 
     def login(self, login: str, password: str) -> Session:
+        if not isinstance(login, str) or not isinstance(password, str) or len(password) > 1024:
+            raise AuthError(Messages.INVALID_CREDENTIALS)
         login = login.strip()
         user = self.usersRepository.findByEmailOrPhone(
             login.lower() if "@" in login else self._normalizePhone(login)
@@ -62,9 +68,10 @@ class AuthController:
         return session
 
     def deleteAccount(self, userId: int) -> None:
-        self.usersRepository.deleteSessionsByUser(userId)
+        with self.usersRepository.db.transaction():
+            self.usersRepository.deleteSessionsByUser(userId)
+            self.usersRepository.delete(userId)
         self.photoStorage.deleteAllByUser(userId)
-        self.usersRepository.delete(userId)
 
     def confirmDelete(self, userId: int) -> None:
         self.deleteAccount(userId)

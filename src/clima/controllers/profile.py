@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from clima.errors import NotFoundError, ValidationError
 from clima.models.entities import Preferences, Settings
 from clima.models.enums import Theme
@@ -28,6 +30,13 @@ class ProfileController:
         self.usersRepository.update(user)
 
     def setTimeZone(self, userId: int, timeZone: str) -> None:
+        if not isinstance(timeZone, str) or not timeZone.strip():
+            raise ValidationError("Некорректный часовой пояс")
+        timeZone = timeZone.strip()
+        try:
+            ZoneInfo(timeZone)
+        except (ZoneInfoNotFoundError, ValueError) as error:
+            raise ValidationError("Некорректный часовой пояс") from error
         user = self._user(userId)
         user.settings.timeZone = timeZone
         self.usersRepository.update(user)

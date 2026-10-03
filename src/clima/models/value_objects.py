@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 from clima.errors import ValidationError
@@ -105,5 +105,15 @@ class PushSubscription:
     auth: str
 
     def __post_init__(self) -> None:
-        if not self.endpoint.startswith("https://") or not self.p256dh or not self.auth:
+        if (
+            not isinstance(self.endpoint, str)
+            or not isinstance(self.p256dh, str)
+            or not isinstance(self.auth, str)
+            or len(self.endpoint) > 2048
+            or len(self.p256dh) > 256
+            or len(self.auth) > 256
+            or not self.endpoint.startswith("https://")
+            or not self.p256dh
+            or not self.auth
+        ):
             raise ValidationError("Некорректная push-подписка")

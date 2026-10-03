@@ -27,11 +27,13 @@ class Database:
     @classmethod
     def getInstance(cls, path: str | Path | None = None) -> "Database":
         with cls._instance_lock:
-            if cls._instance is None:
-                cls._instance = cls(path or "clima.sqlite3")
-            elif path is not None and cls._instance.path != str(path):
+            instance = cls._instance
+            if instance is None:
+                instance = cls(path or "clima.sqlite3")
+                cls._instance = instance
+            elif path is not None and instance.path != str(path):
                 raise RuntimeError("Database singleton is already initialized with another path")
-            return cls._instance
+            return instance
 
     @classmethod
     def resetInstance(cls) -> None:
@@ -70,7 +72,11 @@ class _Transaction:
 
     def __enter__(self):
         self.database._lock.acquire()
-        self.database._connection.execute("BEGIN IMMEDIATE")
+        try:
+            self.database._connection.execute("BEGIN IMMEDIATE")
+        except BaseException:
+            self.database._lock.release()
+            raise
         return self.database._connection
 
     def __exit__(self, exc_type, exc, traceback):

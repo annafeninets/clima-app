@@ -1,9 +1,8 @@
 """Application entry point."""
 
-from http.server import ThreadingHTTPServer
 import logging
 
-from clima.boundaries.http_gateway import create_handler
+from clima.boundaries.http_gateway import ClimaHTTPServer, create_handler
 from clima.config import Config
 from clima.container import Application
 
@@ -17,7 +16,7 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
     application = Application(databasePath=config.dbPath, photoRoot=config.photoRoot)
-    server = ThreadingHTTPServer(
+    server = ClimaHTTPServer(
         (config.host, config.port), create_handler(application, config.corsOrigins)
     )
     scheduleHandler = application.api.scheduleHandler

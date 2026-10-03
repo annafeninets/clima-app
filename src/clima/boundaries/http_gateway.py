@@ -1,7 +1,7 @@
 """HTTP adapter that translates wire requests into Clima API requests."""
 
 from base64 import b64encode
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import logging
 from urllib.parse import parse_qs, urlsplit
@@ -13,6 +13,10 @@ from clima.models.value_objects import Request, Response
 
 logger = logging.getLogger("clima.http")
 MAX_REQUEST_BYTES = 8 * 1024 * 1024
+
+
+class ClimaHTTPServer(ThreadingHTTPServer):
+    request_queue_size = 128
 
 
 def create_handler(
@@ -63,7 +67,7 @@ def create_handler(
 
         def _cors_headers(self):
             origin = self.headers.get("Origin")
-            if origin in corsOrigins:
+            if isinstance(origin, str) and origin in corsOrigins:
                 self.send_header("Access-Control-Allow-Origin", origin)
                 self.send_header("Vary", "Origin")
                 self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")

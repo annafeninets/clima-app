@@ -2,6 +2,7 @@
 
 from datetime import date
 import json
+import logging
 from threading import RLock
 from time import monotonic
 from urllib.error import URLError
@@ -10,6 +11,8 @@ from urllib.request import Request, urlopen
 
 from clima.errors import ServiceUnavailableError, ValidationError
 from clima.models.value_objects import WeatherData
+
+logger = logging.getLogger(__name__)
 
 
 class WeatherService:
@@ -72,9 +75,21 @@ class WeatherService:
         except ValidationError:
             raise
         except (
-            URLError, TimeoutError, OSError, AttributeError, KeyError,
-            IndexError, TypeError, ValueError,
+            ServiceUnavailableError, URLError, TimeoutError, OSError, AttributeError,
+            KeyError, IndexError, TypeError, ValueError,
         ) as error:
+            now = monotonic()
+            with self._lock:
+                cached = self._forecasts.get(cache_key)
+                if cached and cached[0] + self.cacheSeconds > now:
+                    logger.warning(
+                        "Using cached weather for %s on %s after provider failure",
+                        place,
+                        date,
+                    )
+                    return cached[1]
+            if isinstance(error, ServiceUnavailableError):
+                raise
             raise ServiceUnavailableError("Сервис прогноза погоды временно недоступен") from error
 
     def _getLocation(self, place: str) -> dict:

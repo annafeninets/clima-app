@@ -33,22 +33,37 @@ def item_from_data(data: dict, userId: int, existing: Item | None = None) -> Ite
         raise ValidationError("Некорректные характеристики вещи") from error
     return Item(
         id=base.id, userId=userId, createdAt=base.createdAt,
-        photo=base.photo, type=str(values.get("type", base.type)),
-        color=str(values.get("color", base.color)), seasons=seasons,
+        photo=base.photo, type=_string_value(values, "type", base.type),
+        color=_string_value(values, "color", base.color), seasons=seasons,
         minTemperature=minimum, maxTemperature=maximum, part=part,
-        dressCode=str(values.get("dressCode", base.dressCode)),
-        style=str(values.get("style", base.style)),
-        silhouette=str(values.get("silhouette", base.silhouette)),
-        material=str(values.get("material", base.material)),
+        dressCode=_string_value(values, "dressCode", base.dressCode),
+        style=_string_value(values, "style", base.style),
+        silhouette=_string_value(values, "silhouette", base.silhouette),
+        material=_string_value(values, "material", base.material),
         inLaundry=base.inLaundry, deleted=base.deleted,
     )
 
 
+def _string_value(data: dict, key: str, default: str) -> str:
+    value = data.get(key, default)
+    if not isinstance(value, str):
+        raise ValidationError(f"Поле {key} должно быть строкой")
+    return value
+
+
 def preferences_from_data(data: dict) -> Preferences:
-    return Preferences(
-        style=str(data.get("style", "")), colors=str(data.get("colors", "")),
-        sizes=str(data.get("sizes", "")), bodyFeatures=str(data.get("bodyFeatures", "")),
-    )
+    values = {
+        "style": data.get("style", ""),
+        "colors": data.get("colors", ""),
+        "sizes": data.get("sizes", ""),
+        "bodyFeatures": data.get("bodyFeatures", ""),
+    }
+    for name, value in values.items():
+        if not isinstance(value, str):
+            raise ValidationError(f"Поле {name} должно быть строкой")
+        if len(value) > 500:
+            raise ValidationError(f"Поле {name} не должно превышать 500 символов")
+    return Preferences(**values)
 
 
 def outfit_filter(query: dict[str, str], location: str = "") -> OutfitFilter:
@@ -87,10 +102,17 @@ def parse_time(value) -> time:
 
 def push_subscription(data: dict) -> PushSubscription:
     keys = data.get("keys") or {}
+    if not isinstance(keys, dict):
+        raise ValidationError("Ключи push-подписки должны быть объектом")
+    endpoint = data.get("endpoint", "")
+    p256dh = keys.get("p256dh", data.get("p256dh", ""))
+    auth = keys.get("auth", data.get("auth", ""))
+    if not all(isinstance(value, str) for value in (endpoint, p256dh, auth)):
+        raise ValidationError("Поля push-подписки должны быть строками")
     return PushSubscription(
-        endpoint=str(data.get("endpoint", "")),
-        p256dh=str(keys.get("p256dh", data.get("p256dh", ""))),
-        auth=str(keys.get("auth", data.get("auth", ""))),
+        endpoint=endpoint,
+        p256dh=p256dh,
+        auth=auth,
     )
 
 

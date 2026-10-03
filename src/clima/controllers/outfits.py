@@ -1,5 +1,6 @@
-from datetime import date
+from datetime import date, datetime
 from itertools import product
+from zoneinfo import ZoneInfo
 
 from clima.errors import (
     AccessDeniedError,
@@ -111,7 +112,8 @@ class CompatibilityRule:
         tops = [item for item in candidates if item.part == ItemPart.TOP]
         bottoms = [item for item in candidates if item.part == ItemPart.BOTTOM]
         dresses = [item for item in candidates if item.type.casefold() in self._dresses]
-        combinations: list[tuple[Item, ...]] = [(dress,) for dress in dresses]
+        combinations: list[tuple[Item, ...]] = []
+        combinations.extend((dress,) for dress in dresses)
         combinations.extend(product(tops, bottoms))
         scored = [
             (
@@ -197,7 +199,12 @@ class OutfitController:
         place = (location or (user.location if user else "")).strip()
         if not place:
             raise ValidationError("Укажите место в запросе или профиле")
-        filter = OutfitFilter(date.today(), place)
+        selected_date = (
+            datetime.now(ZoneInfo(user.settings.timeZone)).date()
+            if user is not None
+            else date.today()
+        )
+        filter = OutfitFilter(selected_date, place)
         cached = self.outfitsRepository.findByDate(userId, filter.date, filter.place)
         if cached and self._isCurrent(cached, self.itemsRepository.findAvailableByUser(userId)):
             return cached[:self.rule.maxVariants]
@@ -268,7 +275,7 @@ class OutfitController:
                 temperature=filter.temperature, conditions=weather.conditions,
             )
         items = self.itemsRepository.findAvailableByUser(userId)
-        if len(items) < 2:
+        if not items:
             raise NotEnoughItemsError(Messages.NOT_ENOUGH_ITEMS)
         user = self.usersRepository.findById(userId)
         variants = self.rule.generateVariants(

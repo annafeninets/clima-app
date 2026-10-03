@@ -1,26 +1,34 @@
 import base64
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
-from http.server import ThreadingHTTPServer
 import json
+from pathlib import Path
+import sqlite3
 import struct
 import tempfile
-from threading import Thread
 import unittest
-from pathlib import Path
-from urllib.request import urlopen
 import zlib
+from threading import Event, Thread
+from time import monotonic
+from unittest.mock import patch
+from urllib.error import URLError
+from urllib.request import Request as HttpRequest, urlopen
 
+from clima.boundaries.http_gateway import ClimaHTTPServer, create_handler
 from clima.container import Application
-from clima.boundaries.http_gateway import create_handler
+from clima.errors import ServiceUnavailableError, ValidationError
+from clima.handlers.helpers import item_from_data
+from clima.integrations.weather import WeatherService
+from clima.models.entities import Item
 from clima.models.enums import Season
-from clima.models.value_objects import Request, WeatherData
+from clima.models.value_objects import OutfitFilter, Request, WeatherData
 
 
-class FakeWeatherService:
-    def getForecast(self, place, selected_date):
-        return WeatherData(place, selected_date, 18, "ясно")
+class FakeWeatherService(WeatherService):
+    def getForecast(self, place: str, date: date) -> WeatherData:
+        return WeatherData(place, date, 18, "ясно")
 
-    def getWeather(self, location):
+    def getWeather(self, location: str) -> WeatherData:
         return self.getForecast(location, date.today())
 
 
@@ -66,6 +74,7 @@ class BackendTests(unittest.TestCase):
         self.assertTrue(draft.success, draft.message)
         return self.request("PUT", "/wardrobe/items/draft", {
             "id": draft.data.id,
+            "photo": draft.data.photo,
             "type": item_type,
             "color": color,
             "part": part,
@@ -130,6 +139,74 @@ class BackendTests(unittest.TestCase):
         )
         self.assertTrue(removed.success)
 
+    def test_single_dress_is_enough_to_generate_an_outfit(self):
+        session = self.app.authController.validateSession(self.token)
+        dress = Item(
+            userId=session.userId,
+            type="dress",
+            color="black",
+            seasons=list(Season),
+        )
+        self.app.itemsRepository.add(dress)
+
+        outfits = self.app.outfitController.planOutfit(
+            session.userId, OutfitFilter(date.today(), "Moscow", temperature=18)
+        )
+
+        self.assertEqual(len(outfits), 1)
+        self.assertEqual(outfits[0].items[0].id, dress.id)
+
+    def test_weather_uses_recent_cached_forecast_when_service_is_unavailable(self):
+        service = WeatherService(cacheSeconds=60)
+        selected_date = date.today()
+        cached = WeatherData("Moscow", selected_date, 18, "ясно")
+        service._forecasts[("moscow", selected_date)] = (monotonic() - 1, cached)
+
+        with patch.object(service, "_getLocation", side_effect=URLError("offline")):
+            result = service.getForecast("Moscow", selected_date)
+
+        self.assertEqual(result, cached)
+
+    def test_weather_without_cached_forecast_reports_service_unavailable(self):
+        service = WeatherService()
+        with patch.object(service, "_getLocation", side_effect=URLError("offline")):
+            with self.assertRaises(ServiceUnavailableError):
+                service.getForecast("Moscow", date.today())
+
+    def test_item_rejects_invalid_metadata_types(self):
+        with self.assertRaises(ValidationError):
+            item_from_data({"type": None}, userId=1)
+
+    def test_invalid_profile_and_push_payloads_return_validation_errors(self):
+        profile = self.request("PUT", "/profile", {"style": ["casual"]}, self.token)
+        self.assertEqual(profile.status, 422)
+
+        subscription = self.request(
+            "POST", "/push/subscriptions",
+            {"endpoint": "https://push.example.test", "keys": "not-an-object"},
+            self.token,
+        )
+        self.assertEqual(subscription.status, 422)
+
+    def test_failed_transaction_start_does_not_leave_database_locked(self):
+        connection = self.app.database.getConnection()
+        connection.execute("BEGIN")
+        with self.assertRaises(sqlite3.OperationalError):
+            with self.app.database.transaction():
+                self.fail("A nested transaction should not start")
+        connection.execute("ROLLBACK")
+
+        completed = Event()
+
+        def query_from_another_thread():
+            self.app.database.query("SELECT 1")
+            completed.set()
+
+        thread = Thread(target=query_from_another_thread, daemon=True)
+        thread.start()
+        self.assertTrue(completed.wait(timeout=1))
+        thread.join(timeout=1)
+
     def test_profile_theme_and_notification_settings(self):
         saved = self.request("PUT", "/profile", {
             "style": "casual", "colors": "blue,black",
@@ -157,7 +234,7 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(self.request("GET", "/wardrobe", token=self.token).status, 401)
 
     def test_http_server_dispatches_requests(self):
-        server = ThreadingHTTPServer(("127.0.0.1", 0), create_handler(self.app))
+        server = ClimaHTTPServer(("127.0.0.1", 0), create_handler(self.app))
         thread = Thread(target=server.serve_forever)
         thread.start()
         try:
@@ -165,6 +242,29 @@ class BackendTests(unittest.TestCase):
                 payload = json.load(response)
             self.assertTrue(payload["success"])
             self.assertEqual(payload["data"]["fields"], ["login", "password"])
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+    def test_http_server_handles_50_concurrent_authenticated_requests(self):
+        server = ClimaHTTPServer(("127.0.0.1", 0), create_handler(self.app))
+        thread = Thread(target=server.serve_forever)
+        thread.start()
+        url = f"http://127.0.0.1:{server.server_port}/settings"
+
+        def get_settings(_):
+            request = HttpRequest(url, headers={"Authorization": f"Bearer {self.token}"})
+            with urlopen(request, timeout=3) as response:
+                payload = json.load(response)
+                self.assertEqual(response.status, 200)
+                self.assertTrue(payload["success"])
+
+        started = monotonic()
+        try:
+            with ThreadPoolExecutor(max_workers=50) as executor:
+                list(executor.map(get_settings, range(50)))
+            self.assertLess(monotonic() - started, 3)
         finally:
             server.shutdown()
             server.server_close()
