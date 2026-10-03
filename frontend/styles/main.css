@@ -99,7 +99,8 @@
 :root[data-theme="DARK"] .button:hover { background: #c58b98; color: #5a2a38; }
 :root[data-theme="DARK"] .button.secondary { background: #35151e; color: #d8a7b1; border: 1px solid rgb(216 167 177 / 20%); }
 :root[data-theme="DARK"] .button.ghost { color: #d8a7b1; border-color: rgb(216 167 177 / 20%); }
-:root[data-theme="DARK"] .button.danger { color: #d8a7b1; border-color: rgb(216 167 177 / 20%); }
+:root[data-theme="DARK"] .button.danger { background: #d8a7b1; color: #5a2a38; border-color: transparent; }
+:root[data-theme="DARK"] .button.danger:hover { background: #c58b98; color: #5a2a38; }
 :root[data-theme="DARK"] .badge,
 :root[data-theme="DARK"] .empty-art { background: #3a1a22; color: #d8a7b1; }
 :root[data-theme="DARK"] .badge.muted { background: #2c131a; color: rgb(245 232 236 / 60%); }
