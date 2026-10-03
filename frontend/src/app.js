@@ -204,9 +204,17 @@ document.addEventListener("change", (event) => {
 });
 
 document.addEventListener("input", (event) => {
-  if (!event.target.closest("#item-form")) return;
-  const errors = document.querySelector("#item-form-errors");
+  const itemForm = event.target.closest("#item-form");
+  const formSelector = itemForm ? "#item-form-errors"
+    : event.target.closest("#profile-form") ? "#profile-form-errors" : "";
+  if (!formSelector) return;
+  const errors = document.querySelector(formSelector);
   if (errors) errors.textContent = "";
+  if (itemForm && event.target.name) {
+    event.target.removeAttribute("aria-invalid");
+    const fieldError = itemForm.querySelector(`#${event.target.id}-error`);
+    if (fieldError) fieldError.textContent = "";
+  }
 });
 
 document.addEventListener("keydown", (event) => {

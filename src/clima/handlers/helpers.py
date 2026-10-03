@@ -63,6 +63,23 @@ def preferences_from_data(data: dict) -> Preferences:
             raise ValidationError(f"Поле {name} должно быть строкой")
         if len(value) > 500:
             raise ValidationError(f"Поле {name} не должно превышать 500 символов")
+        if value and name == "sizes":
+            valid = all(
+                character.isalpha() or character.isdigit() or character.isspace()
+                or character in ",./+-"
+                for character in value
+            ) and any(character.isalpha() or character.isdigit() for character in value)
+            if not valid:
+                raise ValidationError("Укажите размеры буквами или цифрами")
+        elif value and (
+            not any(character.isalpha() for character in value)
+            or any(
+                not character.isalpha() and not character.isdigit()
+                and not character.isspace() and character not in ",.'’()/-"
+                for character in value
+            )
+        ):
+            raise ValidationError(f"Проверьте значение поля {name}")
     return Preferences(**values)
 
 

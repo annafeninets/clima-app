@@ -17,10 +17,10 @@ from urllib.request import Request as HttpRequest, urlopen
 from clima.boundaries.http_gateway import ClimaHTTPServer, create_handler
 from clima.container import Application
 from clima.errors import ServiceUnavailableError, ValidationError
-from clima.handlers.helpers import item_from_data
+from clima.handlers.helpers import item_from_data, preferences_from_data
 from clima.integrations.weather import WeatherService
 from clima.models.entities import Item
-from clima.models.enums import Season
+from clima.models.enums import ItemPart, Season
 from clima.models.value_objects import OutfitFilter, Request, WeatherData
 
 
@@ -81,6 +81,10 @@ class BackendTests(unittest.TestCase):
             "seasons": [season.value for season in Season],
             "minTemperature": -10,
             "maxTemperature": 40,
+            "dressCode": "casual",
+            "style": "classic",
+            "silhouette": "straight",
+            "material": "cotton",
         }, self.token)
 
     def test_authentication_and_protected_routes(self):
@@ -177,9 +181,48 @@ class BackendTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             item_from_data({"type": None}, userId=1)
 
+    def test_item_rejects_unrealistic_temperatures_and_mismatched_parts(self):
+        base = Item(
+            userId=1, type="джинсы", color="синий", seasons=list(Season),
+            minTemperature=-10, maxTemperature=40, part=ItemPart.TOP,
+            dressCode="casual", style="classic", silhouette="straight",
+            material="denim",
+        )
+        with self.assertRaises(ValidationError):
+            base.validate()
+        base.part = ItemPart.BOTTOM
+        base.maxTemperature = 51
+        with self.assertRaises(ValidationError):
+            base.validate()
+
+    def test_item_requires_all_text_fields(self):
+        valid_values = {
+            "type": "рубашка", "color": "белый", "dressCode": "casual",
+            "style": "classic", "silhouette": "straight", "material": "cotton",
+        }
+        for field in valid_values:
+            for invalid_value in ("", "!!!"):
+                values = {**valid_values, field: invalid_value}
+                item = Item(
+                    userId=1, **values, seasons=list(Season),
+                    minTemperature=-10, maxTemperature=40, part=ItemPart.TOP,
+                )
+                with self.subTest(field=field, value=invalid_value):
+                    with self.assertRaises(ValidationError):
+                        item.validate()
+
     def test_invalid_profile_and_push_payloads_return_validation_errors(self):
         profile = self.request("PUT", "/profile", {"style": ["casual"]}, self.token)
         self.assertEqual(profile.status, 422)
+        invalid_preferences = self.request(
+            "PUT", "/profile", {"style": "!!!", "colors": "", "sizes": "", "bodyFeatures": ""},
+            self.token,
+        )
+        self.assertEqual(invalid_preferences.status, 422)
+        invalid_location = self.request(
+            "PUT", "/profile/location", {"location": "12345"}, self.token,
+        )
+        self.assertEqual(invalid_location.status, 422)
 
         subscription = self.request(
             "POST", "/push/subscriptions",

@@ -23,7 +23,15 @@ class ProfileController:
 
     def setLocation(self, userId: int, location: str) -> None:
         location = location.strip()
-        if not location or len(location) > 200:
+        if (
+            len(location) < 2 or len(location) > 200
+            or not any(character.isalpha() for character in location)
+            or any(
+                not character.isalpha() and not character.isspace()
+                and character not in ".'’-"
+                for character in location
+            )
+        ):
             raise ValidationError("Укажите корректное место")
         user = self._user(userId)
         user.location = location

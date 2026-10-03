@@ -76,6 +76,10 @@ def _validate_card_fields(data: dict) -> None:
         "seasons": ("seasons",),
         "minTemperature": ("minTemperature", "min_temperature"),
         "maxTemperature": ("maxTemperature", "max_temperature"),
+        "dressCode": ("dressCode", "dress_code"),
+        "style": ("style",),
+        "silhouette": ("silhouette",),
+        "material": ("material",),
     }
     missing = [name for name, keys in aliases.items() if not any(key in data for key in keys)]
     if missing:

@@ -145,8 +145,13 @@ h3 { font-size: 17px; margin-bottom: 6px; }
 .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-2); }
 .field textarea { min-height: 86px; resize: vertical; }
 .field-hint { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.field-error { color: var(--red); font-size: 11px; line-height: 1.4; }
+.item-form .field-error { position: absolute; top: calc(100% + 3px); left: 0; z-index: 1; min-height: 16px; }
+.item-form .field:has(.field-error) { position: relative; }
+.item-form .field input[aria-invalid="true"] { border-color: var(--red); }
+.field input[aria-invalid="true"] { border-color: var(--red); }
 .autocomplete { position: relative; min-width: 0; }
-.autocomplete-list, .autocomplete-list[hidden] { position: absolute; z-index: 5; inset: calc(100% + 5px) 0 auto; display: grid; max-height: 210px; overflow-y: auto; padding: 5px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: var(--shadow); }
+.autocomplete-list, .autocomplete-list[hidden] { position: absolute; z-index: 5; inset: calc(100% + 5px) 0 auto; display: grid; max-height: 260px; overflow-y: auto; overscroll-behavior: contain; padding: 5px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: var(--shadow); }
 .autocomplete-list[hidden] { display: none; }
 .autocomplete-option { width: 100%; border: 0; border-radius: 7px; padding: 9px 10px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font-size: 13px; }
 .autocomplete-option:hover, .autocomplete-option[aria-selected="true"] { background: var(--green-2); color: var(--green); }
@@ -199,6 +204,7 @@ h3 { font-size: 17px; margin-bottom: 6px; }
 .settings-panel > h2 { margin-bottom: 5px; }
 .settings-panel > .page-subtitle { margin-bottom: 22px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.item-form-grid { overflow: visible; }
 .form-grid .wide { grid-column: 1 / -1; }
 .season-options { display: flex; flex-wrap: wrap; gap: 8px; }
 .season-option input { position: absolute; opacity: 0; }

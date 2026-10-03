@@ -4,12 +4,50 @@ import { escapeHTML, fileAsDataUrl, icon, itemCountLabel, showToast } from "../u
 import { emptyState, heading, shell } from "../ui/layout.js";
 
 const ITEM_SUGGESTIONS = {
-  type: ["Футболка", "Рубашка", "Блузка", "Свитер", "Худи", "Кардиган", "Куртка", "Пальто", "Платье", "Юбка", "Брюки", "Джинсы", "Шорты", "Кроссовки", "Ботинки", "Шарф"],
-  color: ["Белый", "Чёрный", "Серый", "Бежевый", "Коричневый", "Синий", "Голубой", "Зелёный", "Красный", "Розовый", "Жёлтый", "Фиолетовый", "Оранжевый", "Хаки", "Разноцветный"],
-  dressCode: ["casual", "повседневный", "business", "деловой", "sport", "спортивный", "evening", "вечерний", "any"],
-  style: ["Классический", "Casual", "Спортивный", "Минимализм", "Романтический", "Деловой", "Уличный", "Бохо", "Базовый"],
-  material: ["Хлопок", "Лён", "Шерсть", "Кашемир", "Шёлк", "Вискоза", "Полиэстер", "Деним", "Кожа", "Замша", "Трикотаж", "Акрил"],
-  silhouette: ["Прямой", "Свободный", "Приталенный", "Oversize", "Облегающий", "Широкий", "А-силуэт", "Relaxed"]
+  type: [
+    "Футболка", "Поло", "Лонгслив", "Майка", "Топ", "Рубашка", "Блузка", "Туника",
+    "Корсет", "Боди", "Свитер", "Джемпер", "Пуловер", "Водолазка", "Кардиган",
+    "Свитшот", "Толстовка", "Худи", "Жилет", "Пиджак", "Блейзер", "Куртка",
+    "Кожаная куртка", "Джинсовая куртка", "Бомбер", "Ветровка", "Анорак", "Парка",
+    "Пуховик", "Пальто", "Тренч", "Плащ", "Дублёнка", "Шуба", "Платье", "Сарафан",
+    "Юбка", "Брюки", "Классические брюки", "Джинсы", "Шорты", "Бермуды", "Капри",
+    "Леггинсы", "Спортивные брюки", "Комбинезон", "Кроссовки", "Кеды", "Ботинки",
+    "Ботильоны", "Сапоги", "Туфли", "Лоферы", "Мокасины", "Балетки", "Сандалии",
+    "Сандалии на каблуке", "Босоножки", "Шлёпанцы", "Мюли", "Угги", "Шарф", "Шапка",
+    "Перчатки", "Носки", "Колготки", "Ремень", "Сумка"
+  ],
+  color: [
+    "Белый", "Молочный", "Чёрный", "Серый", "Светло-серый", "Тёмно-серый", "Бежевый",
+    "Песочный", "Коричневый", "Шоколадный", "Синий", "Тёмно-синий", "Голубой",
+    "Бирюзовый", "Зелёный", "Оливковый", "Хаки", "Красный", "Бордовый", "Розовый",
+    "Пудровый", "Жёлтый", "Горчичный", "Оранжевый", "Фиолетовый", "Сиреневый",
+    "Золотой", "Серебряный", "Разноцветный"
+  ],
+  dressCode: [
+    "casual", "повседневный", "business", "деловой", "sport", "спортивный",
+    "evening", "вечерний", "formal", "официальный", "smart casual", "any", "любой"
+  ],
+  style: [
+    "Классический", "Casual", "Спортивный", "Минимализм", "Романтический", "Деловой",
+    "Уличный", "Бохо", "Базовый", "Повседневный", "Элегантный", "Офисный", "Preppy",
+    "Гранж", "Винтажный", "Ретро", "Рок", "Авангардный", "Скандинавский", "Тихая роскошь"
+  ],
+  material: [
+    "Хлопок", "Лён", "Шерсть", "Мериносовая шерсть", "Кашемир", "Шёлк", "Вискоза",
+    "Полиэстер", "Нейлон", "Акрил", "Эластан", "Деним", "Кожа", "Экокожа", "Замша",
+    "Трикотаж", "Флис", "Вельвет", "Велюр", "Атлас", "Сатин", "Шифон", "Жаккард",
+    "Кружево", "Твид", "Бархат", "Мембранная ткань", "Пух", "Смесовая ткань"
+  ],
+  silhouette: [
+    "Прямой", "Свободный", "Приталенный", "Oversize", "Облегающий", "Широкий",
+    "А-силуэт", "Relaxed", "Полуприлегающий", "Оверсайз", "Слим", "Skinny", "Slim fit",
+    "Regular fit", "Свободный крой", "Прямой крой", "Зауженный", "Расклешённый",
+    "Клёш", "Палаццо", "Карго", "Бананы", "Мом", "Бойфренд", "Высокая посадка",
+    "Средняя посадка", "Низкая посадка", "Карандаш", "Трапеция", "Солнце", "Плиссе",
+    "Футляр", "Баллон", "Кокон", "Тюльпан", "Ампир", "Принцесса", "Миди", "Макси",
+    "Мини", "Укороченный", "Удлинённый", "Двубортный", "Однобортный", "На запах",
+    "Асимметричный", "Многослойный", "Структурный"
+  ]
 };
 
 const ITEM_TEXT_FIELDS = [
@@ -22,15 +60,17 @@ const ITEM_TEXT_FIELDS = [
 ];
 
 const TOP_TYPE_MARKERS = [
-  "футболк", "рубаш", "блуз", "свитер", "худи", "кардиган", "куртк", "пальто",
-  "плащ", "пиджак", "жилет", "топ", "майк", "свитшот", "кофт", "жакет",
-  "джемпер", "пуловер", "парка", "ветровк", "толстовк", "водолазк", "лонгслив",
-  "футбол", "рубаш", "blouse", "sweater", "hoodie", "jacket", "coat"
+  "футболк", "поло", "лонгслив", "майк", "топ", "рубаш", "блуз", "туник", "корсет",
+  "боди", "свитер", "худи", "кардиган", "куртк", "пальто", "плащ", "пиджак",
+  "жилет", "свитшот", "толстовк", "жакет", "блейзер", "джемпер", "пуловер", "парка",
+  "ветровк", "анорак", "пухов", "тренч", "дубл", "шуб", "водолазк", "бомбер",
+  "футбол", "blouse", "sweater", "hoodie", "jacket", "coat"
 ];
 const BOTTOM_TYPE_MARKERS = [
-  "джинс", "брюк", "штан", "юбк", "шорт", "леггинс", "лосин", "капри",
-  "кроссов", "ботин", "сапог", "туфл", "сандал", "кед", "мокасин",
-  "jean", "trouser", "pants", "skirt", "shorts", "legging", "shoe", "boot"
+  "джинс", "брюк", "штан", "юбк", "шорт", "бермуд", "леггинс", "лосин", "капри",
+  "кроссов", "кед", "ботин", "ботильон", "сапог", "туфл", "лофер", "мокасин",
+  "балет", "сандал", "босонож", "шлеп", "мюл", "угг", "jean", "trouser", "pants",
+  "skirt", "shorts", "legging", "shoe", "boot"
 ];
 
 function normalizeSuggestion(value) {
@@ -49,6 +89,19 @@ export function expectedPartForType(type) {
 
 export function isValidItemText(value) {
   return /\p{L}/u.test(value) && /^[\p{L}\p{M}\p{N}\s.,'’()/#%+\-]+$/u.test(value);
+}
+
+function itemOptions(name) {
+  return [...new Map([
+    ...ITEM_SUGGESTIONS[name],
+    ...state.wardrobe.map((wardrobeItem) => wardrobeItem[name]).filter(Boolean)
+  ].map((option) => [normalizeSuggestion(option), option])).values()];
+}
+
+function isValidItemOption(value, options) {
+  return isValidItemText(value) && options.some(
+    (option) => normalizeSuggestion(option) === normalizeSuggestion(value)
+  );
 }
 
 function editDistance(left, right) {
@@ -93,9 +146,11 @@ function attachAutocomplete(input, list, candidates) {
     const matches = candidates
       .map((value) => ({ value, score: query ? suggestionMatches(value, query) : 0 }))
       .filter(({ score }) => score >= 0)
-      .sort((left, right) => left.score - right.score || left.value.localeCompare(right.value, "ru"))
-      .slice(0, 7);
-    if (!matches.length || (!query && !showAll)) {
+      .sort((left, right) => showAll && !query
+        ? left.value.localeCompare(right.value, "ru")
+        : left.score - right.score || left.value.localeCompare(right.value, "ru"))
+      .slice(0, showAll && !query ? candidates.length : 7);
+    if (!matches.length) {
       close();
       return;
     }
@@ -167,35 +222,32 @@ export function openItemForm(item = {}) {
   const checkedSeasons = item.seasons || [];
   const textFields = ITEM_TEXT_FIELDS.map(([name, label, placeholder]) => {
     const id = `item-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
-    const value = item[name] || (name === "dressCode" ? "casual" : "");
-    const options = [...new Set([
-      ...ITEM_SUGGESTIONS[name],
-      ...state.wardrobe.map((wardrobeItem) => wardrobeItem[name]).filter(Boolean)
-    ])];
+    const value = item[name] || "";
+    const options = itemOptions(name);
     return {
       name,
       label,
-      markup: `<div class="field"><label for="${id}">${label}</label><div class="autocomplete"><input id="${id}" name="${name}" required maxlength="100" value="${escapeHTML(value)}" placeholder="${placeholder}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${id}-suggestions" /><div class="autocomplete-list" id="${id}-suggestions" role="listbox" hidden></div></div></div>`,
+      markup: `<div class="field"><label for="${id}">${label}</label><div class="autocomplete"><input id="${id}" name="${name}" required maxlength="100" value="${escapeHTML(value)}" placeholder="${placeholder}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${id}-suggestions" aria-describedby="${id}-error" /><div class="autocomplete-list" id="${id}-suggestions" role="listbox" hidden></div></div><small class="field-error" id="${id}-error" aria-live="polite"></small></div>`,
       options
     };
   });
   const textField = (name) => textFields.find((field) => field.name === name).markup;
   const preview = item.photo?.startsWith("data:")
     ? `<div class="field wide"><img src="${escapeHTML(item.photo)}" style="width:84px;height:84px;border-radius:12px;object-fit:cover" alt="Фото вещи" /></div>` : "";
-  const form = `<form id="item-form" data-id="${item.id || ""}" data-has-photo="${hasExistingPhoto}" novalidate><div class="form-grid">
+  const form = `<form id="item-form" class="item-form" data-id="${item.id || ""}" data-has-photo="${hasExistingPhoto}" novalidate><div class="form-grid item-form-grid">
     <label class="file-drop wide" for="item-photo" tabindex="-1">${icon("image")}<span id="file-label">${isEdit ? "Заменить фото (необязательно)" : "Загрузить фото · обязательно, до 5 МБ"}</span><input id="item-photo" name="photo" type="file" accept="image/png,image/jpeg,image/gif,image/webp" /></label>
     ${preview}
     ${textField("type")}
     ${textField("color")}
-    <div class="field"><label for="item-part">Часть образа</label><select id="item-part" name="part"><option value="TOP" ${item.part !== "BOTTOM" ? "selected" : ""}>Верх</option><option value="BOTTOM" ${item.part === "BOTTOM" ? "selected" : ""}>Низ</option></select></div>
+    <div class="field"><label for="item-part">Часть образа</label><select id="item-part" name="part" required><option value="" ${item.part ? "" : "selected"} disabled>Выберите часть образа</option><option value="TOP" ${item.part === "TOP" ? "selected" : ""}>Верх</option><option value="BOTTOM" ${item.part === "BOTTOM" ? "selected" : ""}>Низ</option></select></div>
     ${textField("dressCode")}
-    <div class="field wide"><span class="field-label">Сезоны</span><div class="season-options">${SEASONS.map((season) => `<label class="season-option"><input type="checkbox" name="seasons" value="${season}" ${checkedSeasons.includes(season) || (!item.id && season !== "WINTER") ? "checked" : ""} /><span>${SEASON_LABELS[season]}</span></label>`).join("")}</div></div>
-    <div class="field"><label for="min-temp">От, °C</label><input id="min-temp" name="minTemperature" type="number" required value="${item.minTemperature ?? -10}" /></div>
-    <div class="field"><label for="max-temp">До, °C</label><input id="max-temp" name="maxTemperature" type="number" required value="${item.maxTemperature ?? 40}" /></div>
+    <div class="field wide"><span class="field-label">Сезоны</span><div class="season-options">${SEASONS.map((season) => `<label class="season-option"><input type="checkbox" name="seasons" value="${season}" ${checkedSeasons.includes(season) ? "checked" : ""} /><span>${SEASON_LABELS[season]}</span></label>`).join("")}</div></div>
+    <div class="field"><label for="min-temp">От, °C</label><input id="min-temp" name="minTemperature" type="number" min="-50" max="50" step="1" required value="${item.minTemperature ?? ""}" placeholder="−50…50" /><small class="field-hint">Допустимо от −50 до 50 °C</small></div>
+    <div class="field"><label for="max-temp">До, °C</label><input id="max-temp" name="maxTemperature" type="number" min="-50" max="50" step="1" required value="${item.maxTemperature ?? ""}" placeholder="−50…50" /><small class="field-hint">Допустимо от −50 до 50 °C</small></div>
     ${textField("style")}
     ${textField("material")}
     ${textField("silhouette")}
-    <div class="field"><label for="item-laundry">Стирка</label><select id="item-laundry" name="inLaundry"><option value="false" ${!item.inLaundry ? "selected" : ""}>Чистая</option><option value="true" ${item.inLaundry ? "selected" : ""}>В стирке</option></select></div>
+    ${isEdit ? `<div class="field"><label for="item-laundry">Стирка</label><select id="item-laundry" name="inLaundry"><option value="false" ${!item.inLaundry ? "selected" : ""}>Чистая</option><option value="true" ${item.inLaundry ? "selected" : ""}>В стирке</option></select></div>` : ""}
     </div><div class="form-errors" id="item-form-errors" role="alert" aria-live="polite"></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Отмена</button>${isEdit ? `<button class="button danger" type="button" data-action="delete-item" data-id="${item.id}">Удалить</button>` : ""}<button class="button" type="submit">${isEdit ? "Сохранить" : "Добавить в гардероб"}</button></div></form>`;
   const root = document.querySelector("#modal-root");
   root.innerHTML = `<div class="modal-backdrop" data-action="backdrop"><section class="modal" role="dialog" aria-modal="true"><header class="modal-header"><div><h2>${isEdit ? "Редактировать вещь" : "Новая вещь"}</h2><p class="page-subtitle">Добавьте фото и характеристики — они помогут подобрать образ.</p></div><button class="modal-close" data-action="close-modal" aria-label="Закрыть">${icon("close")}</button></header>${form}</section></div>`;
@@ -252,6 +304,34 @@ export async function saveItem(event) {
   const textValues = Object.fromEntries(ITEM_TEXT_FIELDS.map(([name]) =>
     [name, String(data.get(name) ?? "").trim()]
   ));
+  const invalidTextFields = ITEM_TEXT_FIELDS.flatMap(([name, label]) => {
+    const value = textValues[name];
+    const message = !value
+      ? `Заполните поле «${label.toLocaleLowerCase("ru")}».`
+      : value.length > 100
+        ? `Поле «${label.toLocaleLowerCase("ru")}» не должно превышать 100 символов.`
+        : !isValidItemOption(value, itemOptions(name))
+          ? `Выберите корректный вариант поля «${label.toLocaleLowerCase("ru")}» из списка.`
+          : "";
+    return message ? [{ name, message }] : [];
+  });
+  ITEM_TEXT_FIELDS.forEach(([name]) => {
+    const input = form.elements.namedItem(name);
+    const error = form.querySelector(`#${input.id}-error`);
+    const fieldError = invalidTextFields.find((invalid) => invalid.name === name);
+    input.setAttribute("aria-invalid", String(Boolean(fieldError)));
+    error.textContent = fieldError?.message || "";
+  });
+  if (invalidTextFields.length) {
+    if (errors) errors.textContent = "Проверьте отмеченные поля: " +
+      invalidTextFields.map(({ name }) =>
+        ITEM_TEXT_FIELDS.find(([fieldName]) => fieldName === name)[1].toLocaleLowerCase("ru")
+      ).join(", ") + ".";
+    const invalidInput = form.elements.namedItem(invalidTextFields[0].name);
+    invalidInput.focus();
+    invalidInput.scrollIntoView({ block: "center", behavior: "smooth" });
+    return false;
+  }
   let validationError = null;
 
   if (!fileSelected && !currentPhotoExists) {
@@ -260,15 +340,6 @@ export async function saveItem(event) {
     validationError = { message: "Поддерживаются фотографии PNG, JPEG, GIF и WebP.", selector: ".file-drop" };
   } else if (fileSelected && file.size > 5 * 1024 * 1024) {
     validationError = { message: "Размер фотографии не должен превышать 5 МБ.", selector: ".file-drop" };
-  } else if (ITEM_TEXT_FIELDS.some(([name]) => !textValues[name])) {
-    const [name, label] = ITEM_TEXT_FIELDS.find(([field]) => !textValues[field]);
-    validationError = { message: `Заполните поле «${label.toLocaleLowerCase("ru")}».`, selector: `[name="${name}"]` };
-  } else if (ITEM_TEXT_FIELDS.some(([name]) => textValues[name].length > 100)) {
-    const [name, label] = ITEM_TEXT_FIELDS.find(([field]) => textValues[field].length > 100);
-    validationError = { message: `Поле «${label.toLocaleLowerCase("ru")}» не должно превышать 100 символов.`, selector: `[name="${name}"]` };
-  } else if (ITEM_TEXT_FIELDS.some(([name]) => !isValidItemText(textValues[name]))) {
-    const [name, label] = ITEM_TEXT_FIELDS.find(([field]) => !isValidItemText(textValues[field]));
-    validationError = { message: `Проверьте значение поля «${label.toLocaleLowerCase("ru")}»: используйте буквы, цифры и обычные знаки препинания.`, selector: `[name="${name}"]` };
   } else if (expectedPart === "MIXED") {
     validationError = { message: "В типе вещи указаны одновременно верх и низ. Укажите одну вещь в одном поле.", selector: '[name="type"]' };
   } else if (expectedPart && expectedPart !== data.get("part")) {
@@ -282,10 +353,10 @@ export async function saveItem(event) {
     validationError = { message: "Укажите целую минимальную температуру.", selector: "#min-temp" };
   } else if (rawMaximum === "" || !Number.isSafeInteger(maximum)) {
     validationError = { message: "Укажите целую максимальную температуру.", selector: "#max-temp" };
-  } else if (minimum < -100 || minimum > 100) {
-    validationError = { message: "Минимальная температура должна быть от −100 до 100 °C.", selector: "#min-temp" };
-  } else if (maximum < -100 || maximum > 100) {
-    validationError = { message: "Максимальная температура должна быть от −100 до 100 °C.", selector: "#max-temp" };
+  } else if (minimum < -50 || minimum > 50) {
+    validationError = { message: "Минимальная температура должна быть от −50 до 50 °C.", selector: "#min-temp" };
+  } else if (maximum < -50 || maximum > 50) {
+    validationError = { message: "Максимальная температура должна быть от −50 до 50 °C.", selector: "#max-temp" };
   } else if (minimum > maximum) {
     validationError = { message: "Минимальная температура не может быть выше максимальной.", selector: "#min-temp" };
   }
@@ -304,7 +375,7 @@ export async function saveItem(event) {
     const card = {
       type, color, part: data.get("part"), seasons,
       minTemperature: minimum, maxTemperature: maximum,
-      dressCode: textValues.dressCode || "casual", style: textValues.style,
+      dressCode: textValues.dressCode, style: textValues.style,
       material: textValues.material, silhouette: textValues.silhouette
     };
     if (!card.seasons.length) throw new Error("Выберите хотя бы один сезон");
