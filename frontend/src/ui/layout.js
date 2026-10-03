@@ -8,7 +8,7 @@ export const ROUTE_NAMES = {
 
 function navButton(page) {
   const symbols = { home: "home", plan: "sparkle", wardrobe: "hanger", favorites: "heart", history: "clock", settings: "settings" };
-  return `<button class="nav-link ${state.page === page ? "active" : ""}" data-page="${page}">${icon(symbols[page])}<span>${ROUTE_NAMES[page]}</span></button>`;
+  return `<button class="nav-link ${state.page === page ? "active" : ""}" data-page="${page}" title="${ROUTE_NAMES[page]}" aria-label="${ROUTE_NAMES[page]}">${icon(symbols[page])}<span>${ROUTE_NAMES[page]}</span></button>`;
 }
 
 export function shell(content) {
@@ -18,10 +18,10 @@ export function shell(content) {
       <div class="brand"><div class="brand-mark">${icon("sun")}</div><div><div class="brand-name">clima</div><div class="brand-caption">style by weather</div></div></div>
       <div class="nav-label">Меню</div><nav class="nav-list">${["home", "plan", "wardrobe", "favorites", "history", "settings"].map(navButton).join("")}</nav>
       <div class="sidebar-bottom"><div class="weather-note"><strong>Гардероб с умом</strong><p>Образы, которые подходят погоде и вашему стилю.</p></div>
-        <div class="user-chip"><div class="avatar">${escapeHTML((state.login[0] || "U").toUpperCase())}</div><div class="user-meta"><strong>${escapeHTML(state.login || "Пользователь")}</strong><span>Личный гардероб</span></div><button class="icon-button logout" title="Выйти">${icon("logout")}</button></div>
+        <div class="user-chip"><div class="avatar" title="${escapeHTML(state.login || "Пользователь")}">${escapeHTML((state.login[0] || "U").toUpperCase())}</div><div class="user-meta"><strong>${escapeHTML(state.login || "Пользователь")}</strong><span>Личный гардероб</span></div></div>
       </div>
     </aside>
-    <main class="main"><header class="topbar"><div><div class="eyebrow">Ваш персональный стилист</div><div class="topbar-date">${escapeHTML(dateText)}</div></div><div class="top-actions"><button class="icon-button theme-toggle" title="Сменить тему">${icon("sun")}</button><button class="icon-button mobile-logout" title="Выйти">${icon("logout")}</button></div></header><div class="page">${content}</div></main>
+    <main class="main"><header class="topbar"><div><div class="eyebrow">Ваш персональный стилист</div><div class="topbar-date">${escapeHTML(dateText)}</div></div><div class="top-actions"><button class="icon-button theme-toggle" title="Сменить тему">${icon("sun")}</button><button class="icon-button logout mobile-logout" title="Выйти">${icon("logout")}</button></div></header><div class="page">${content}</div></main>
     <nav class="mobile-nav">${["home", "plan", "wardrobe", "favorites", "settings"].map(navButton).join("")}</nav><div id="modal-root"></div>
   </div>`;
 }

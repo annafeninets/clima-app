@@ -94,12 +94,7 @@ const SILHOUETTES_BY_CATEGORY = {
     "Карандаш", "Трапеция", "Солнце", "Плиссе", "Футляр", "Баллон", "Кокон", "Тюльпан",
     "Ампир", "Принцесса", "Миди", "Макси", "Мини", "На запах", "Асимметричный"
   ],
-  footwear: [
-    "Кроссовки", "Кеды", "Ботинки", "Ботильоны", "Сапоги", "Туфли", "Лоферы",
-    "Балетки", "Сандалии", "На каблуке", "На платформе", "На плоской подошве",
-    "Высокое голенище", "Низкое голенище", "Округлый нос", "Острый нос",
-    "Квадратный нос", "Массивная подошва", "Минималистичные"
-  ],
+  noSilhouette: [],
   bag: [
     "Тоут", "Шоппер", "Кросс-боди", "Клатч", "Сэтчел", "Хобо", "Сумка-ведро",
     "Рюкзак", "Мини-сумка", "Структурная", "Мягкая форма", "Прямоугольная",
@@ -143,9 +138,10 @@ function normalizeSuggestion(value) {
 function typeCategory(type) {
   const normalized = normalizeSuggestion(type);
   if (["сумк", "рюкзак", "клатч", "кошелек", "кошелёк", "bag"].some((marker) => normalized.includes(marker))) return "bag";
-  if (FOOTWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "footwear";
+  if (FOOTWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "noSilhouette";
   if (["шарф", "scarf"].some((marker) => normalized.includes(marker))) return "scarf";
-  if (["шапк", "перчат", "носк", "колгот", "ремн"].some((marker) => normalized.includes(marker))) return "accessory";
+  if (["носк", "колгот", "перчат", "рем"].some((marker) => normalized.includes(marker))) return "noSilhouette";
+  if (["шапк", "перчат", "носк", "колгот", "рем"].some((marker) => normalized.includes(marker))) return "accessory";
   if (["плать", "сарафан", "комбинезон"].some((marker) => normalized.includes(marker))) return "onePiece";
   if (["куртк", "пальто", "плащ", "блейзер", "джинсовая куртка"].some((marker) => normalized.includes(marker))) return "upper";
   if (BOTTOM_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "lower";
@@ -156,7 +152,7 @@ function typeCategory(type) {
 export function expectedPartForType(type) {
   const normalized = normalizeSuggestion(type);
   if (FOOTWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "SHOES";
-  if (["шарф", "шапк", "перчат", "носк", "колгот", "ремн", "сумк", "рюкзак", "клатч", "кошелек", "кошелёк", "scarf", "bag"].some((marker) => normalized.includes(marker))) return "ACCESSORY";
+  if (["шарф", "шапк", "перчат", "носк", "колгот", "рем", "сумк", "рюкзак", "клатч", "кошелек", "кошелёк", "scarf", "bag"].some((marker) => normalized.includes(marker))) return "ACCESSORY";
   if (["плать", "сарафан", "комбинезон", "dress", "jumpsuit"].some((marker) => normalized.includes(marker))) return "ONE_PIECE";
   const isTop = TOP_TYPE_MARKERS.some((marker) => normalized.includes(marker));
   const isBottom = BOTTOM_TYPE_MARKERS.some((marker) => normalized.includes(marker));

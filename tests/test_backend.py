@@ -218,7 +218,7 @@ class BackendTests(unittest.TestCase):
             "material": "leather",
         }
         for item_type, part, silhouette in (
-            ("Ботинки", ItemPart.SHOES, "На платформе"),
+            ("Ботинки", ItemPart.SHOES, ""),
             ("Шарф", ItemPart.ACCESSORY, "Снуд"),
             ("Сумка", ItemPart.ACCESSORY, "Кросс-боди"),
             ("Юбка", ItemPart.BOTTOM, "Трапеция"),
@@ -229,9 +229,7 @@ class BackendTests(unittest.TestCase):
                     silhouette=silhouette, **base_values,
                 )
                 item.validate()
-
         for item_type, part, silhouette in (
-            ("Ботинки", ItemPart.SHOES, "Структурная"),
             ("Шарф", ItemPart.ACCESSORY, "Кросс-боди"),
             ("Сумка", ItemPart.ACCESSORY, "Снуд"),
             ("Юбка", ItemPart.BOTTOM, "На платформе"),
@@ -244,12 +242,24 @@ class BackendTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValidationError, "Силуэт"):
                     invalid.validate()
 
-        missing_silhouette = Item(
-            userId=1, type="Ботинки", part=ItemPart.SHOES,
-            silhouette="", **base_values,
+        shoes_with_silhouette = Item(
+            userId=1, type="Лоферы", part=ItemPart.SHOES,
+            silhouette="Ботинки", **base_values,
         )
-        with self.assertRaisesRegex(ValidationError, "силуэт"):
-            missing_silhouette.validate()
+        with self.assertRaisesRegex(ValidationError, "Силуэт"):
+            shoes_with_silhouette.validate()
+
+        for item_type, part in (
+            ("Носки", ItemPart.ACCESSORY),
+            ("Перчатки", ItemPart.ACCESSORY),
+            ("Ремень", ItemPart.ACCESSORY),
+        ):
+            with self.subTest(item_type=item_type):
+                item_without_silhouette = Item(
+                    userId=1, type=item_type, part=part,
+                    silhouette="", **base_values,
+                )
+                item_without_silhouette.validate()
 
     def test_denim_jacket_is_validated_as_top(self):
         jacket = Item(
@@ -267,7 +277,7 @@ class BackendTests(unittest.TestCase):
             "style": "classic", "material": "leather",
         }
         for item_type, part, silhouette in (
-            ("Сапоги", ItemPart.SHOES, "Низкое голенище"),
+            ("Сапоги", ItemPart.SHOES, ""),
             ("Шарф", ItemPart.ACCESSORY, "Палантин"),
         ):
             with self.subTest(item_type=item_type):
@@ -294,6 +304,20 @@ class BackendTests(unittest.TestCase):
         }, userId=1)
         hat.validate()
 
+    def test_item_without_silhouette_field_is_valid_when_not_applicable(self):
+        shoe = item_from_data({
+            "type": "Лоферы",
+            "color": "Чёрный",
+            "part": "SHOES",
+            "seasons": ["SPRING"],
+            "minTemperature": 0,
+            "maxTemperature": 20,
+            "dressCode": "повседневный",
+            "style": "Классический",
+            "material": "Кожа",
+        }, userId=1)
+        shoe.validate()
+
     def test_generated_outfit_can_include_matching_shoes(self):
         session = self.app.authController.validateSession(self.token)
         top = Item(
@@ -309,7 +333,7 @@ class BackendTests(unittest.TestCase):
         shoes = Item(
             userId=session.userId, type="sneakers", color="white", part=ItemPart.SHOES,
             seasons=list(Season), minTemperature=-10, maxTemperature=40,
-            dressCode="casual", style="classic", silhouette="На платформе", material="leather",
+            dressCode="casual", style="classic", silhouette="", material="leather",
         )
         for item in (top, bottom, shoes):
             self.app.itemsRepository.add(item)

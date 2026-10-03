@@ -4,6 +4,7 @@ import binascii
 
 from clima.errors import ValidationError
 from clima.models.entities import Item, Preferences
+from clima.models.entities.item import SILHOUETTES_BY_CATEGORY, silhouette_category_for_type
 from clima.models.enums import ItemPart, Season
 from clima.models.value_objects import OutfitFilter, PushSubscription
 
@@ -22,6 +23,7 @@ def parse_photo(value) -> bytes:
 def item_from_data(data: dict, userId: int, existing: Item | None = None) -> Item:
     base = existing or Item(userId=userId)
     values = _item_values(data)
+    item_type = _string_value(values, "type", base.type)
     try:
         seasons = [Season(str(value).upper()) for value in values.get(
             "seasons", [s.value for s in base.seasons]
@@ -37,14 +39,19 @@ def item_from_data(data: dict, userId: int, existing: Item | None = None) -> Ite
         maximum = int(values.get("maxTemperature", base.maxTemperature))
     except (ValueError, TypeError) as error:
         raise ValidationError("Температура должна быть целым числом") from error
+    silhouette = _string_value(
+        values,
+        "silhouette",
+        base.silhouette if SILHOUETTES_BY_CATEGORY[silhouette_category_for_type(item_type)] else "",
+    )
     return Item(
         id=base.id, userId=userId, createdAt=base.createdAt,
-        photo=base.photo, type=_string_value(values, "type", base.type),
+        photo=base.photo, type=item_type,
         color=_string_value(values, "color", base.color), seasons=seasons,
         minTemperature=minimum, maxTemperature=maximum, part=part,
         dressCode=_string_value(values, "dressCode", base.dressCode),
         style=_string_value(values, "style", base.style),
-        silhouette=_string_value(values, "silhouette", base.silhouette),
+        silhouette=silhouette,
         material=_string_value(values, "material", base.material),
         inLaundry=base.inLaundry, deleted=base.deleted,
     )

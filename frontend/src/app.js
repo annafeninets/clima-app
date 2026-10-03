@@ -6,7 +6,7 @@ import {
 } from "./features/outfits.js";
 import {
   changeLaundry, deleteItem, openItemForm, renderWardrobe
-} from "./features/wardrobe.js?v=20261003-12";
+} from "./features/wardrobe.js?v=20261003-13";
 import {
   renderSettings, saveNotifications, saveProfile, subscribePush
 } from "./features/settings.js";

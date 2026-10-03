@@ -23,8 +23,11 @@ SHOE_TYPE_MARKERS = (
     "кроссов", "кед", "ботин", "ботильон", "сапог", "туфл", "лофер", "мокасин",
     "балет", "сандал", "босонож", "шлеп", "мюл", "угг", "shoe", "boot",
 )
+NO_SILHOUETTE_TYPE_MARKERS = (
+    *SHOE_TYPE_MARKERS, "носк", "колгот", "перчат", "рем",
+)
 ACCESSORY_TYPE_MARKERS = (
-    "шарф", "шапк", "перчат", "носк", "колгот", "ремн", "сумк", "рюкзак",
+    "шарф", "шапк", "перчат", "носк", "колгот", "рем", "сумк", "рюкзак",
     "клатч", "кошелек", "кошелёк", "scarf", "bag",
 )
 ONE_PIECE_TYPE_MARKERS = ("плать", "сарафан", "комбинезон", "dress", "jumpsuit")
@@ -47,11 +50,7 @@ SILHOUETTES_BY_CATEGORY = {
         "баллон", "кокон", "тюльпан", "ампир", "принцесса", "миди", "макси", "мини",
         "на запах", "асимметричный",
     ),
-    "footwear": (
-        "кроссовки", "кеды", "ботинки", "ботильоны", "сапоги", "туфли", "лоферы",
-        "балетки", "сандалии", "на каблуке", "на платформе", "на плоской подошве",
-        "высокое голенище", "низкое голенище", "округлый нос", "острый нос",
-        "квадратный нос", "массивная подошва", "минималистичные",
+    "noSilhouette": (
     ),
     "bag": (
         "тоут", "шоппер", "кросс-боди", "клатч", "сэтчел", "хобо", "сумка-ведро",
@@ -88,13 +87,13 @@ def expected_part_for_type(item_type: str) -> ItemPart | None:
 
 def silhouette_category_for_type(item_type: str) -> str:
     normalized = item_type.casefold().replace("ё", "е")
-    if any(marker in normalized for marker in SHOE_TYPE_MARKERS):
-        return "footwear"
+    if any(marker in normalized for marker in NO_SILHOUETTE_TYPE_MARKERS):
+        return "noSilhouette"
     if any(marker in normalized for marker in ("сумк", "рюкзак", "клатч", "кошелек", "кошелёк", "bag")):
         return "bag"
     if any(marker in normalized for marker in ("шарф", "scarf")):
         return "scarf"
-    if any(marker in normalized for marker in ("шапк", "перчат", "носк", "колгот", "ремн")):
+    if any(marker in normalized for marker in ("шапк", "перчат", "носк", "колгот", "рем")):
         return "accessory"
     if any(marker in normalized for marker in ONE_PIECE_TYPE_MARKERS):
         return "onePiece"
@@ -142,12 +141,13 @@ class Item(OwnedEntity):
         if not isinstance(self.type, str):
             raise ValidationError("Поле «тип» должно быть строкой")
         silhouette_options = SILHOUETTES_BY_CATEGORY[silhouette_category_for_type(self.type)]
+        silhouette_optional = not silhouette_options
         text_fields = (
             ("тип", self.type, 100, False),
             ("цвет", self.color, 100, False),
             ("повод", self.dressCode, 100, False),
             ("стиль", self.style, 100, False),
-            ("силуэт", self.silhouette, 100, False),
+            ("силуэт", self.silhouette, 100, silhouette_optional),
             ("материал", self.material, 100, False),
         )
         for label, value, max_length, optional in text_fields:
