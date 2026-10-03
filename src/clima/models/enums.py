@@ -16,6 +16,9 @@ class Season(StrEnum):
 class ItemPart(StrEnum):
     TOP = "TOP"
     BOTTOM = "BOTTOM"
+    SHOES = "SHOES"
+    ACCESSORY = "ACCESSORY"
+    ONE_PIECE = "ONE_PIECE"
 
 
 class Actions:

@@ -211,6 +211,113 @@ class BackendTests(unittest.TestCase):
                     with self.assertRaises(ValidationError):
                         item.validate()
 
+    def test_silhouettes_are_required_and_match_item_category(self):
+        base_values = {
+            "color": "чёрный", "seasons": list(Season), "minTemperature": -10,
+            "maxTemperature": 40, "dressCode": "casual", "style": "classic",
+            "material": "leather",
+        }
+        for item_type, part, silhouette in (
+            ("Ботинки", ItemPart.SHOES, "На платформе"),
+            ("Шарф", ItemPart.ACCESSORY, "Снуд"),
+            ("Сумка", ItemPart.ACCESSORY, "Кросс-боди"),
+            ("Юбка", ItemPart.BOTTOM, "Трапеция"),
+        ):
+            with self.subTest(item_type=item_type):
+                item = Item(
+                    userId=1, type=item_type, part=part,
+                    silhouette=silhouette, **base_values,
+                )
+                item.validate()
+
+        for item_type, part, silhouette in (
+            ("Ботинки", ItemPart.SHOES, "Структурная"),
+            ("Шарф", ItemPart.ACCESSORY, "Кросс-боди"),
+            ("Сумка", ItemPart.ACCESSORY, "Снуд"),
+            ("Юбка", ItemPart.BOTTOM, "На платформе"),
+        ):
+            with self.subTest(item_type=item_type, silhouette=silhouette):
+                invalid = Item(
+                    userId=1, type=item_type, part=part,
+                    silhouette=silhouette, **base_values,
+                )
+                with self.assertRaisesRegex(ValidationError, "Силуэт"):
+                    invalid.validate()
+
+        missing_silhouette = Item(
+            userId=1, type="Ботинки", part=ItemPart.SHOES,
+            silhouette="", **base_values,
+        )
+        with self.assertRaisesRegex(ValidationError, "силуэт"):
+            missing_silhouette.validate()
+
+    def test_denim_jacket_is_validated_as_top(self):
+        jacket = Item(
+            userId=1, type="Джинсовая куртка", color="синий",
+            seasons=list(Season), minTemperature=-10, maxTemperature=20,
+            part=ItemPart.TOP, dressCode="casual", style="classic",
+            silhouette="Прямой", material="Деним",
+        )
+        jacket.validate()
+
+    def test_item_part_matches_shoes_accessories_and_one_piece_types(self):
+        values = {
+            "userId": 1, "color": "чёрный", "seasons": list(Season),
+            "minTemperature": -10, "maxTemperature": 40, "dressCode": "casual",
+            "style": "classic", "material": "leather",
+        }
+        for item_type, part, silhouette in (
+            ("Сапоги", ItemPart.SHOES, "Низкое голенище"),
+            ("Шарф", ItemPart.ACCESSORY, "Палантин"),
+        ):
+            with self.subTest(item_type=item_type):
+                item = Item(type=item_type, part=part, silhouette=silhouette, **values)
+                item.validate()
+        dress = Item(
+            type="Платье", part=ItemPart.ONE_PIECE,
+            silhouette="А-силуэт", **values,
+        )
+        dress.validate()
+
+    def test_hat_form_values_are_accepted(self):
+        hat = item_from_data({
+            "type": "Шапка",
+            "color": "Белый",
+            "part": "ACCESSORY",
+            "seasons": ["SPRING"],
+            "minTemperature": 0,
+            "maxTemperature": 10,
+            "dressCode": "вечерний",
+            "style": "Базовый",
+            "material": "Атлас",
+            "silhouette": "Бейсболка",
+        }, userId=1)
+        hat.validate()
+
+    def test_generated_outfit_can_include_matching_shoes(self):
+        session = self.app.authController.validateSession(self.token)
+        top = Item(
+            userId=session.userId, type="shirt", color="white", part=ItemPart.TOP,
+            seasons=list(Season), minTemperature=-10, maxTemperature=40,
+            dressCode="casual", style="classic", silhouette="straight", material="cotton",
+        )
+        bottom = Item(
+            userId=session.userId, type="pants", color="black", part=ItemPart.BOTTOM,
+            seasons=list(Season), minTemperature=-10, maxTemperature=40,
+            dressCode="casual", style="classic", silhouette="straight", material="cotton",
+        )
+        shoes = Item(
+            userId=session.userId, type="sneakers", color="white", part=ItemPart.SHOES,
+            seasons=list(Season), minTemperature=-10, maxTemperature=40,
+            dressCode="casual", style="classic", silhouette="На платформе", material="leather",
+        )
+        for item in (top, bottom, shoes):
+            self.app.itemsRepository.add(item)
+        variants = self.app.outfitController.rule.generateVariants(
+            [top, bottom, shoes], WeatherData("Moscow", date.today(), 18, "ясно")
+        )
+        self.assertTrue(any(any(item.part == ItemPart.SHOES for item in outfit.items) for outfit in variants))
+
     def test_invalid_profile_and_push_payloads_return_validation_errors(self):
         profile = self.request("PUT", "/profile", {"style": ["casual"]}, self.token)
         self.assertEqual(profile.status, 422)

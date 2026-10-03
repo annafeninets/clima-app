@@ -7,7 +7,13 @@ export const STORAGE_KEYS = {
 
 export const SEASONS = ["WINTER", "SPRING", "SUMMER", "AUTUMN"];
 export const SEASON_LABELS = { WINTER: "Зима", SPRING: "Весна", SUMMER: "Лето", AUTUMN: "Осень" };
-export const PARTS = { TOP: "Верх", BOTTOM: "Низ" };
+export const PARTS = {
+  TOP: "Верх",
+  BOTTOM: "Низ",
+  SHOES: "Обувь",
+  ACCESSORY: "Аксессуары",
+  ONE_PIECE: "Платье / комбинезон"
+};
 
 export const state = {
   api: (window.CLIMA_CONFIG?.apiBaseUrl || "http://127.0.0.1:8000").replace(/\/+$/, ""),

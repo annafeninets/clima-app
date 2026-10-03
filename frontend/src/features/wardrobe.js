@@ -72,15 +72,95 @@ const BOTTOM_TYPE_MARKERS = [
   "балет", "сандал", "босонож", "шлеп", "мюл", "угг", "jean", "trouser", "pants",
   "skirt", "shorts", "legging", "shoe", "boot"
 ];
+const FOOTWEAR_TYPE_MARKERS = [
+  "кроссов", "кед", "ботин", "ботильон", "сапог", "туфл", "лофер", "мокасин",
+  "балет", "сандал", "босонож", "шлеп", "мюл", "угг", "shoe", "boot"
+];
+const SILHOUETTES_BY_CATEGORY = {
+  upper: [
+    "Прямой", "Свободный", "Приталенный", "Oversize", "Облегающий", "Relaxed",
+    "Широкий", "Оверсайз", "Полуприлегающий", "Слим", "Slim fit", "Regular fit",
+    "Свободный крой", "Прямой крой", "Укороченный", "Удлинённый", "Структурный",
+    "На запах", "Асимметричный"
+  ],
+  lower: [
+    "Прямой", "Свободный", "Широкий", "Облегающий", "Relaxed", "Skinny", "Slim fit",
+    "Regular fit", "Зауженный", "Расклешённый", "Клёш", "Палаццо", "Карго", "Бананы",
+    "Мом", "Бойфренд", "Высокая посадка", "Средняя посадка", "Низкая посадка",
+    "Укороченный", "Удлинённый", "Карандаш", "Трапеция", "Плиссе"
+  ],
+  onePiece: [
+    "Прямой", "Свободный", "Приталенный", "Облегающий", "А-силуэт", "Полуприлегающий",
+    "Карандаш", "Трапеция", "Солнце", "Плиссе", "Футляр", "Баллон", "Кокон", "Тюльпан",
+    "Ампир", "Принцесса", "Миди", "Макси", "Мини", "На запах", "Асимметричный"
+  ],
+  footwear: [
+    "Кроссовки", "Кеды", "Ботинки", "Ботильоны", "Сапоги", "Туфли", "Лоферы",
+    "Балетки", "Сандалии", "На каблуке", "На платформе", "На плоской подошве",
+    "Высокое голенище", "Низкое голенище", "Округлый нос", "Острый нос",
+    "Квадратный нос", "Массивная подошва", "Минималистичные"
+  ],
+  bag: [
+    "Тоут", "Шоппер", "Кросс-боди", "Клатч", "Сэтчел", "Хобо", "Сумка-ведро",
+    "Рюкзак", "Мини-сумка", "Структурная", "Мягкая форма", "Прямоугольная",
+    "Круглая", "Полумесяц", "Вытянутая", "Компактная", "Объёмная"
+  ],
+  scarf: [
+    "Длинный", "Короткий", "Широкий", "Узкий", "Треугольный", "Квадратный",
+    "Палантин", "Снуд", "На запах", "Объёмный", "Лёгкий", "Плотный"
+  ],
+  accessory: [
+    "Бини", "Бейсболка", "Панама", "Берет", "Кепка", "Широкополая",
+    "Длинные", "Короткие", "Высокие", "Низкие", "Широкий", "Узкий",
+    "Классический", "Компактный"
+  ]
+};
+const CONTEXT_OPTIONS = {
+  dressCode: {
+    default: ITEM_SUGGESTIONS.dressCode,
+    accessory: ["casual", "повседневный", "business", "деловой", "evening", "вечерний", "formal", "официальный", "any", "любой"],
+    bag: ["casual", "повседневный", "business", "деловой", "evening", "вечерний", "formal", "официальный", "smart casual", "any", "любой"],
+    footwear: ["casual", "повседневный", "business", "деловой", "sport", "спортивный", "evening", "вечерний", "formal", "официальный", "any", "любой"]
+  },
+  style: {
+    default: ITEM_SUGGESTIONS.style,
+    accessory: ["Классический", "Casual", "Повседневный", "Деловой", "Элегантный", "Минимализм", "Уличный", "Винтажный", "Ретро", "Базовый"],
+    bag: ["Классический", "Casual", "Повседневный", "Деловой", "Элегантный", "Минимализм", "Уличный", "Бохо", "Винтажный", "Базовый"],
+    footwear: ["Классический", "Casual", "Повседневный", "Спортивный", "Деловой", "Элегантный", "Минимализм", "Уличный", "Гранж", "Базовый"]
+  },
+  material: {
+    default: ITEM_SUGGESTIONS.material,
+    accessory: ["Хлопок", "Шерсть", "Кашемир", "Шёлк", "Кожа", "Экокожа", "Замша", "Трикотаж", "Флис", "Вельвет", "Атлас", "Сатин", "Кружево", "Металл", "Пластик"],
+    bag: ["Кожа", "Экокожа", "Замша", "Деним", "Нейлон", "Полиэстер", "Хлопок", "Канвас", "Солома", "Плетёный материал"],
+    footwear: ["Кожа", "Экокожа", "Замша", "Нубук", "Текстиль", "Деним", "Нейлон", "Резина", "Полиуретан", "Мембранная ткань", "Шерсть"]
+  }
+};
 
 function normalizeSuggestion(value) {
   return value.trim().toLocaleLowerCase("ru").replaceAll("ё", "е");
 }
 
+function typeCategory(type) {
+  const normalized = normalizeSuggestion(type);
+  if (["сумк", "рюкзак", "клатч", "кошелек", "кошелёк", "bag"].some((marker) => normalized.includes(marker))) return "bag";
+  if (FOOTWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "footwear";
+  if (["шарф", "scarf"].some((marker) => normalized.includes(marker))) return "scarf";
+  if (["шапк", "перчат", "носк", "колгот", "ремн"].some((marker) => normalized.includes(marker))) return "accessory";
+  if (["плать", "сарафан", "комбинезон"].some((marker) => normalized.includes(marker))) return "onePiece";
+  if (["куртк", "пальто", "плащ", "блейзер", "джинсовая куртка"].some((marker) => normalized.includes(marker))) return "upper";
+  if (BOTTOM_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "lower";
+  if (TOP_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "upper";
+  return "upper";
+}
+
 export function expectedPartForType(type) {
   const normalized = normalizeSuggestion(type);
+  if (FOOTWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "SHOES";
+  if (["шарф", "шапк", "перчат", "носк", "колгот", "ремн", "сумк", "рюкзак", "клатч", "кошелек", "кошелёк", "scarf", "bag"].some((marker) => normalized.includes(marker))) return "ACCESSORY";
+  if (["плать", "сарафан", "комбинезон", "dress", "jumpsuit"].some((marker) => normalized.includes(marker))) return "ONE_PIECE";
   const isTop = TOP_TYPE_MARKERS.some((marker) => normalized.includes(marker));
   const isBottom = BOTTOM_TYPE_MARKERS.some((marker) => normalized.includes(marker));
+  if (isTop && isBottom && normalized.includes("куртк") && normalized.includes("джинс")) return "TOP";
   if (isTop && isBottom) return "MIXED";
   if (isTop) return "TOP";
   if (isBottom) return "BOTTOM";
@@ -91,10 +171,28 @@ export function isValidItemText(value) {
   return /\p{L}/u.test(value) && /^[\p{L}\p{M}\p{N}\s.,'’()/#%+\-]+$/u.test(value);
 }
 
-function itemOptions(name) {
+function itemOptions(name, type = "", part = "") {
+  const category = typeCategory(type);
+  if (name === "type" && part) {
+    const matchesPart = (option) => expectedPartForType(option) === part ||
+      (!expectedPartForType(option) && (part === "TOP" || part === "BOTTOM"));
+    const filtered = [
+      ...ITEM_SUGGESTIONS.type,
+      ...state.wardrobe.map((wardrobeItem) => wardrobeItem.type)
+    ].filter(matchesPart);
+    return [...new Map(filtered.map((option) => [normalizeSuggestion(option), option])).values()];
+  }
+  const allowed = name === "silhouette"
+    ? SILHOUETTES_BY_CATEGORY[category] || []
+    : CONTEXT_OPTIONS[name]?.[category] || CONTEXT_OPTIONS[name]?.default || ITEM_SUGGESTIONS[name];
+  const allowedSet = new Set(allowed.map(normalizeSuggestion));
+  if (name === "silhouette" && !allowed.length) return [];
   return [...new Map([
-    ...ITEM_SUGGESTIONS[name],
-    ...state.wardrobe.map((wardrobeItem) => wardrobeItem[name]).filter(Boolean)
+    ...allowed,
+    ...state.wardrobe
+      .filter((wardrobeItem) => name === "type" || typeCategory(wardrobeItem.type) === category)
+      .map((wardrobeItem) => wardrobeItem[name])
+      .filter((value) => value && allowedSet.has(normalizeSuggestion(value)))
   ].map((option) => [normalizeSuggestion(option), option])).values()];
 }
 
@@ -102,6 +200,18 @@ function isValidItemOption(value, options) {
   return isValidItemText(value) && options.some(
     (option) => normalizeSuggestion(option) === normalizeSuggestion(value)
   );
+}
+
+function itemTextFieldError(name, value, type, part) {
+  const [, label] = ITEM_TEXT_FIELDS.find(([fieldName]) => fieldName === name);
+  const options = itemOptions(name, type, part);
+  if (name === "silhouette" && !options.length) return "";
+  if (!value) return `Заполните поле «${label.toLocaleLowerCase("ru")}».`;
+  if (value.length > 100) return `Поле «${label.toLocaleLowerCase("ru")}» не должно превышать 100 символов.`;
+  if (!isValidItemOption(value, options)) {
+    return `Выберите корректный вариант поля «${label.toLocaleLowerCase("ru")}» из списка.`;
+  }
+  return "";
 }
 
 function editDistance(left, right) {
@@ -133,7 +243,7 @@ function suggestionMatches(value, query) {
   return query.length >= 3 && editDistance(query, firstWord) <= Math.max(1, Math.floor(query.length / 4)) ? 3 : -1;
 }
 
-function attachAutocomplete(input, list, candidates) {
+function attachAutocomplete(input, list, getCandidates) {
   let activeIndex = -1;
   const close = () => {
     list.hidden = true;
@@ -143,6 +253,7 @@ function attachAutocomplete(input, list, candidates) {
   };
   const render = (showAll = false) => {
     const query = normalizeSuggestion(input.value);
+    const candidates = getCandidates();
     const matches = candidates
       .map((value) => ({ value, score: query ? suggestionMatches(value, query) : 0 }))
       .filter(({ score }) => score >= 0)
@@ -212,7 +323,7 @@ export async function renderWardrobe() {
   const cards = await Promise.all(filtered.map(itemCard));
   const action = `<button class="button secondary" data-action="compose-outfit">${icon("sparkle")}Собрать образ</button><button class="button" data-action="open-item">${icon("plus")}Добавить вещь</button>`;
   return shell(`${heading("Мой гардероб", `${itemCountLabel(state.wardrobe.length)} в вашей коллекции. Каждая вещь — часть будущего образа.`, action)}
-    <div class="toolbar"><div class="search-field">${icon("search")}<input id="wardrobe-search" placeholder="Найти вещь..." value="${escapeHTML(state.search)}" /></div><div class="filter-pills">${[["ALL", "Все"], ["TOP", "Верх"], ["BOTTOM", "Низ"], ["CLEAN", "Чистые"], ["LAUNDRY", "В стирке"]].map(([value, label]) => `<button class="filter-pill ${state.filter === value ? "active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div></div>
+    <div class="toolbar"><div class="search-field">${icon("search")}<input id="wardrobe-search" placeholder="Найти вещь..." value="${escapeHTML(state.search)}" /></div><div class="filter-pills">${[["ALL", "Все"], ...Object.entries(PARTS), ["CLEAN", "Чистые"], ["LAUNDRY", "В стирке"]].map(([value, label]) => `<button class="filter-pill ${state.filter === value ? "active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div></div>
     ${cards.length ? `<div class="wardrobe-grid">${cards.join("")}</div>` : emptyState(state.wardrobe.length ? "Ничего не найдено" : "Ваш гардероб ждёт первую вещь", state.wardrobe.length ? "Попробуйте изменить поиск или фильтр." : "Добавьте фото любимой вещи и укажите её характеристики — Clima позаботится об остальном.", state.wardrobe.length ? "" : "Добавить вещь", state.wardrobe.length ? "" : "open-item")}`);
 }
 
@@ -223,7 +334,7 @@ export function openItemForm(item = {}) {
   const textFields = ITEM_TEXT_FIELDS.map(([name, label, placeholder]) => {
     const id = `item-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
     const value = item[name] || "";
-    const options = itemOptions(name);
+    const options = itemOptions(name, item.type || "");
     return {
       name,
       label,
@@ -239,7 +350,7 @@ export function openItemForm(item = {}) {
     ${preview}
     ${textField("type")}
     ${textField("color")}
-    <div class="field"><label for="item-part">Часть образа</label><select id="item-part" name="part" required><option value="" ${item.part ? "" : "selected"} disabled>Выберите часть образа</option><option value="TOP" ${item.part === "TOP" ? "selected" : ""}>Верх</option><option value="BOTTOM" ${item.part === "BOTTOM" ? "selected" : ""}>Низ</option></select></div>
+    <div class="field"><label for="item-part">Часть образа</label><select id="item-part" name="part" required aria-describedby="item-part-error"><option value="" ${item.part ? "" : "selected"} disabled>Выберите часть образа</option>${Object.entries(PARTS).map(([value, label]) => `<option value="${value}" ${item.part === value ? "selected" : ""}>${label}</option>`).join("")}</select><small class="field-error" id="item-part-error" aria-live="polite"></small></div>
     ${textField("dressCode")}
     <div class="field wide"><span class="field-label">Сезоны</span><div class="season-options">${SEASONS.map((season) => `<label class="season-option"><input type="checkbox" name="seasons" value="${season}" ${checkedSeasons.includes(season) ? "checked" : ""} /><span>${SEASON_LABELS[season]}</span></label>`).join("")}</div></div>
     <div class="field"><label for="min-temp">От, °C</label><input id="min-temp" name="minTemperature" type="number" min="-50" max="50" step="1" required value="${item.minTemperature ?? ""}" placeholder="−50…50" /><small class="field-hint">Допустимо от −50 до 50 °C</small></div>
@@ -251,10 +362,64 @@ export function openItemForm(item = {}) {
     </div><div class="form-errors" id="item-form-errors" role="alert" aria-live="polite"></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Отмена</button>${isEdit ? `<button class="button danger" type="button" data-action="delete-item" data-id="${item.id}">Удалить</button>` : ""}<button class="button" type="submit">${isEdit ? "Сохранить" : "Добавить в гардероб"}</button></div></form>`;
   const root = document.querySelector("#modal-root");
   root.innerHTML = `<div class="modal-backdrop" data-action="backdrop"><section class="modal" role="dialog" aria-modal="true"><header class="modal-header"><div><h2>${isEdit ? "Редактировать вещь" : "Новая вещь"}</h2><p class="page-subtitle">Добавьте фото и характеристики — они помогут подобрать образ.</p></div><button class="modal-close" data-action="close-modal" aria-label="Закрыть">${icon("close")}</button></header>${form}</section></div>`;
-  textFields.forEach(({ name, options }) => {
+  const typeInput = root.querySelector("#item-type");
+  const refreshTypeDependentFields = () => {
+    for (const name of ["dressCode", "style", "material", "silhouette"]) {
+      const input = root.querySelector(`#item-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`);
+      const field = input.closest(".field");
+      const list = root.querySelector(`#${input.id}-suggestions`);
+      const options = itemOptions(name, typeInput.value, root.querySelector("#item-part").value);
+      if (name === "silhouette") {
+        const supported = options.length > 0;
+        field.hidden = !supported;
+        input.disabled = !supported;
+        input.required = supported;
+        if (!supported) {
+          input.value = "";
+          input.setAttribute("aria-invalid", "false");
+          field.querySelector(".field-error").textContent = "";
+        }
+      } else if (input.value && !isValidItemOption(input.value, options)) {
+        input.value = "";
+        input.setAttribute("aria-invalid", "false");
+        field.querySelector(".field-error").textContent = "";
+      }
+      if (list && !list.hidden) list.hidden = true;
+    }
+    const part = root.querySelector("#item-part");
+    const expectedPart = expectedPartForType(typeInput.value);
+    if (expectedPart) part.value = expectedPart;
+    for (const { name } of textFields) {
+      const input = root.querySelector(`#item-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`);
+      if (input.getAttribute("aria-invalid") !== "true") continue;
+      const message = itemTextFieldError(name, input.value.trim(), typeInput.value, part.value);
+      input.setAttribute("aria-invalid", String(Boolean(message)));
+      root.querySelector(`#${input.id}-error`).textContent = message;
+    }
+  };
+  textFields.forEach(({ name }) => {
     const id = `item-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
-    attachAutocomplete(root.querySelector(`#${id}`), root.querySelector(`#${id}-suggestions`), options);
+    const input = root.querySelector(`#${id}`);
+    input.addEventListener("input", () => {
+      const message = itemTextFieldError(
+        name, input.value.trim(), typeInput.value,
+        root.querySelector("#item-part").value
+      );
+      input.setAttribute("aria-invalid", String(Boolean(message)));
+      root.querySelector(`#${id}-error`).textContent = message;
+    });
+    attachAutocomplete(input, root.querySelector(`#${id}-suggestions`), () =>
+      itemOptions(name, typeInput.value, root.querySelector("#item-part").value)
+    );
   });
+  typeInput.addEventListener("input", refreshTypeDependentFields);
+  root.querySelector("#item-part").addEventListener("change", () => {
+    if (!typeInput.value || !isValidItemOption(typeInput.value, itemOptions("type", "", root.querySelector("#item-part").value))) {
+      typeInput.value = "";
+    }
+    refreshTypeDependentFields();
+  });
+  refreshTypeDependentFields();
   root.querySelector("#item-photo")?.addEventListener("change", () => {
     const errors = root.querySelector("#item-form-errors");
     if (errors) errors.textContent = "";
@@ -271,8 +436,7 @@ export function openItemForm(item = {}) {
     try {
       if (await saveItem(event)) window.dispatchEvent(new Event("clima:item-saved"));
     } catch (error) {
-      const errors = itemForm.querySelector("#item-form-errors");
-      if (errors) errors.textContent = error.message || "Не удалось сохранить вещь.";
+      showItemSaveError(itemForm, error);
     } finally {
       if (itemForm.isConnected) {
         delete itemForm.dataset.submitting;
@@ -283,9 +447,53 @@ export function openItemForm(item = {}) {
   });
 }
 
+function showItemSaveError(form, error) {
+  const message = error.message || "Не удалось сохранить вещь.";
+  const normalized = normalizeSuggestion(message);
+  let target = null;
+  if (normalized.includes("фото")) {
+    target = form.querySelector(".file-drop");
+    target?.classList.add("invalid");
+  } else if (normalized.includes("сезон")) {
+    target = form.querySelector(".season-options");
+    target?.classList.add("invalid");
+  } else if (normalized.includes("температур")) {
+    target = form.querySelector(normalized.includes("максим") ? "#max-temp" : "#min-temp");
+  } else if (normalized.includes("силуэт")) {
+    target = form.elements.namedItem("silhouette");
+  } else if (normalized.includes("цвет")) {
+    target = form.elements.namedItem("color");
+  } else if (normalized.includes("тип")) {
+    target = form.elements.namedItem("type");
+  } else {
+    target = form.elements.namedItem("part");
+  }
+  if (target && target.matches("input, select")) {
+    target.setAttribute("aria-invalid", "true");
+    const errorElement = form.querySelector(`#${target.id}-error`) ||
+      target.closest(".field")?.querySelector(".field-error");
+    if (errorElement) errorElement.textContent = message;
+  }
+  if (normalized.includes("некорректные характеристики")) {
+    form.querySelector("#item-form-errors").textContent =
+      "Сервер не распознал выбранную часть образа. Обновите backend, чтобы применились категории обуви и аксессуаров.";
+    form.elements.namedItem("part").setAttribute("aria-invalid", "true");
+    form.querySelector("#item-part-error").textContent =
+      "Сервер может не поддерживать выбранную категорию. Перезапустите или обновите backend.";
+    return;
+  }
+  form.querySelector("#item-form-errors").textContent = message;
+  target?.focus();
+  target?.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
 export async function saveItem(event) {
   event.preventDefault();
   const form = event.currentTarget;
+  form.querySelectorAll('[aria-invalid="true"]').forEach((field) => field.removeAttribute("aria-invalid"));
+  form.querySelector(".season-options")?.classList.remove("invalid");
+  form.querySelector(".file-drop")?.classList.remove("invalid");
+  form.querySelectorAll(".field-error").forEach((message) => { message.textContent = ""; });
   const data = new FormData(form);
   const id = form.dataset.id;
   const file = data.get("photo");
@@ -306,13 +514,9 @@ export async function saveItem(event) {
   ));
   const invalidTextFields = ITEM_TEXT_FIELDS.flatMap(([name, label]) => {
     const value = textValues[name];
-    const message = !value
-      ? `Заполните поле «${label.toLocaleLowerCase("ru")}».`
-      : value.length > 100
-        ? `Поле «${label.toLocaleLowerCase("ru")}» не должно превышать 100 символов.`
-        : !isValidItemOption(value, itemOptions(name))
-          ? `Выберите корректный вариант поля «${label.toLocaleLowerCase("ru")}» из списка.`
-          : "";
+    const message = itemTextFieldError(
+      name, value, type, String(data.get("part") || "")
+    );
     return message ? [{ name, message }] : [];
   });
   ITEM_TEXT_FIELDS.forEach(([name]) => {
@@ -343,9 +547,9 @@ export async function saveItem(event) {
   } else if (expectedPart === "MIXED") {
     validationError = { message: "В типе вещи указаны одновременно верх и низ. Укажите одну вещь в одном поле.", selector: '[name="type"]' };
   } else if (expectedPart && expectedPart !== data.get("part")) {
-    const expectedPartLabel = expectedPart === "TOP" ? "верх" : "низ";
-    validationError = { message: `Тип вещи «${type}» относится к категории «${expectedPartLabel}». Измените часть образа или укажите другой тип вещи.`, selector: "#item-part" };
-  } else if (!["TOP", "BOTTOM"].includes(data.get("part"))) {
+    const expectedPartLabel = PARTS[expectedPart] || "другой категории";
+    validationError = { message: `Тип вещи «${type}» относится к категории «${expectedPartLabel.toLocaleLowerCase("ru")}». Измените часть образа или укажите другой тип вещи.`, selector: "#item-part" };
+  } else if (!Object.hasOwn(PARTS, data.get("part"))) {
     validationError = { message: "Выберите корректную часть образа.", selector: "#item-part" };
   } else if (!seasons.length || seasons.some((season) => !SEASONS.includes(season))) {
     validationError = { message: "Выберите хотя бы один корректный сезон.", selector: '[name="seasons"]' };
@@ -364,6 +568,14 @@ export async function saveItem(event) {
   if (validationError) {
     if (errors) errors.textContent = validationError.message;
     const invalidField = form.querySelector(validationError.selector);
+    if (validationError.selector === ".file-drop") {
+      invalidField?.classList.add("invalid");
+    } else if (validationError.selector === '[name="seasons"]') {
+      form.querySelector(".season-options")?.classList.add("invalid");
+      invalidField?.setAttribute("aria-invalid", "true");
+    } else {
+      invalidField?.setAttribute("aria-invalid", "true");
+    }
     invalidField?.focus();
     invalidField?.scrollIntoView({ block: "center", behavior: "smooth" });
     return false;

@@ -148,8 +148,11 @@ h3 { font-size: 17px; margin-bottom: 6px; }
 .field-error { color: var(--red); font-size: 11px; line-height: 1.4; }
 .item-form .field-error { position: absolute; top: calc(100% + 3px); left: 0; z-index: 1; min-height: 16px; }
 .item-form .field:has(.field-error) { position: relative; }
-.item-form .field input[aria-invalid="true"] { border-color: var(--red); }
+.item-form .field[hidden] { display: none; }
+.item-form input[aria-invalid="true"], .item-form select[aria-invalid="true"] { border-color: var(--red); box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 15%, transparent); }
 .field input[aria-invalid="true"] { border-color: var(--red); }
+.item-form .file-drop.invalid { border-color: var(--red); color: var(--red); background: color-mix(in srgb, var(--red) 8%, var(--surface)); }
+.item-form .season-options.invalid .season-option span { border-color: var(--red); color: var(--red); }
 .autocomplete { position: relative; min-width: 0; }
 .autocomplete-list, .autocomplete-list[hidden] { position: absolute; z-index: 5; inset: calc(100% + 5px) 0 auto; display: grid; max-height: 260px; overflow-y: auto; overscroll-behavior: contain; padding: 5px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: var(--shadow); }
 .autocomplete-list[hidden] { display: none; }

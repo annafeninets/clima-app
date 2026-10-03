@@ -6,7 +6,7 @@ import {
 } from "./features/outfits.js";
 import {
   changeLaundry, deleteItem, openItemForm, renderWardrobe
-} from "./features/wardrobe.js?v=20261003-9";
+} from "./features/wardrobe.js?v=20261003-12";
 import {
   renderSettings, saveNotifications, saveProfile, subscribePush
 } from "./features/settings.js";
@@ -196,10 +196,17 @@ document.addEventListener("change", (event) => {
     const file = event.target.files[0];
     const label = document.querySelector("#file-label");
     if (label) label.textContent = file ? file.name : "Загрузить фото";
+    event.target.closest(".file-drop")?.classList.remove("invalid");
   }
   if (event.target.closest("#item-form")) {
     const errors = document.querySelector("#item-form-errors");
     if (errors) errors.textContent = "";
+    event.target.removeAttribute("aria-invalid");
+    const fieldError = event.target.closest(".field")?.querySelector(".field-error");
+    if (fieldError) fieldError.textContent = "";
+    if (event.target.name === "seasons") {
+      event.target.closest(".season-options")?.classList.remove("invalid");
+    }
   }
 });
 
@@ -211,9 +218,15 @@ document.addEventListener("input", (event) => {
   const errors = document.querySelector(formSelector);
   if (errors) errors.textContent = "";
   if (itemForm && event.target.name) {
-    event.target.removeAttribute("aria-invalid");
     const fieldError = itemForm.querySelector(`#${event.target.id}-error`);
-    if (fieldError) fieldError.textContent = "";
+    if (!fieldError) {
+      event.target.removeAttribute("aria-invalid");
+      const nearbyError = event.target.closest(".field")?.querySelector(".field-error");
+      if (nearbyError) nearbyError.textContent = "";
+    }
+    if (event.target.name === "seasons") {
+      event.target.closest(".season-options")?.classList.remove("invalid");
+    }
   }
 });
 

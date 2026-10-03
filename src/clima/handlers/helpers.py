@@ -26,11 +26,17 @@ def item_from_data(data: dict, userId: int, existing: Item | None = None) -> Ite
         seasons = [Season(str(value).upper()) for value in values.get(
             "seasons", [s.value for s in base.seasons]
         )]
+    except (ValueError, TypeError) as error:
+        raise ValidationError("Укажите корректные сезоны") from error
+    try:
         part = ItemPart(str(values.get("part", base.part.value)).upper())
+    except (ValueError, TypeError) as error:
+        raise ValidationError("Выберите корректную часть образа") from error
+    try:
         minimum = int(values.get("minTemperature", base.minTemperature))
         maximum = int(values.get("maxTemperature", base.maxTemperature))
     except (ValueError, TypeError) as error:
-        raise ValidationError("Некорректные характеристики вещи") from error
+        raise ValidationError("Температура должна быть целым числом") from error
     return Item(
         id=base.id, userId=userId, createdAt=base.createdAt,
         photo=base.photo, type=_string_value(values, "type", base.type),

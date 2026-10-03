@@ -48,12 +48,18 @@ class CompatibilityRule:
         available = [item for item in items if item.isAvailable()]
         if not available:
             return CheckResult(False, "Нет доступных вещей")
-        if len(available) == 1 and available[0].type.casefold() in self._dresses:
+        one_pieces = [item for item in available if self._isOnePiece(item)]
+        if one_pieces:
+            core = [item for item in available if not self._isOnePiece(item)]
+            if any(item.part in (ItemPart.TOP, ItemPart.BOTTOM) for item in core):
+                return CheckResult(False, "Платье или комбинезон нельзя сочетать с верхом или низом")
+        else:
+            tops = [item for item in available if item.part == ItemPart.TOP]
+            bottoms = [item for item in available if item.part == ItemPart.BOTTOM]
+            if not tops or not bottoms:
+                return CheckResult(False, "Для комплекта нужны верх и низ или платье")
+        if len(available) == 1 and self._isOnePiece(available[0]):
             return CheckResult(True, "")
-        tops = [item for item in available if item.part == ItemPart.TOP]
-        bottoms = [item for item in available if item.part == ItemPart.BOTTOM]
-        if not tops or not bottoms:
-            return CheckResult(False, "Для комплекта нужны верх и низ или платье")
         colors = [self._canonicalColor(item.color) for item in available]
         for index, first in enumerate(colors):
             for second in colors[index + 1:]:
@@ -76,6 +82,10 @@ class CompatibilityRule:
                 occasion.casefold(), "any", "casual", "повседневный",
             }:
                 score -= 5
+            if item.part == ItemPart.SHOES:
+                score += 4
+            elif item.part == ItemPart.ACCESSORY:
+                score += 1
         conditions = weather.conditions.casefold()
         garments = " ".join(
             f"{item.type} {item.material} {item.dressCode}".casefold() for item in items
@@ -111,10 +121,19 @@ class CompatibilityRule:
         ]
         tops = [item for item in candidates if item.part == ItemPart.TOP]
         bottoms = [item for item in candidates if item.part == ItemPart.BOTTOM]
-        dresses = [item for item in candidates if item.type.casefold() in self._dresses]
+        dresses = [item for item in candidates if self._isOnePiece(item)]
+        tops = [item for item in tops if not self._isOnePiece(item)]
+        bottoms = [item for item in bottoms if not self._isOnePiece(item)]
+        shoes = [item for item in candidates if item.part == ItemPart.SHOES][:3]
+        accessories = [item for item in candidates if item.part == ItemPart.ACCESSORY][:3]
         combinations: list[tuple[Item, ...]] = []
-        combinations.extend((dress,) for dress in dresses)
-        combinations.extend(product(tops, bottoms))
+        core_combinations = [(dress,) for dress in dresses]
+        core_combinations.extend(product(tops, bottoms))
+        for core in core_combinations:
+            for shoe in [None, *shoes]:
+                for accessory in [None, *accessories]:
+                    extras = tuple(item for item in (shoe, accessory) if item is not None)
+                    combinations.append((*core, *extras))
         scored = [
             (
                 self.match(list(items_set), weather, occasion)
@@ -159,6 +178,10 @@ class CompatibilityRule:
             + (5 if item.silhouette.casefold() in silhouettes else 0)
             for item in items
         )
+
+    @classmethod
+    def _isOnePiece(cls, item: Item) -> bool:
+        return item.part == ItemPart.ONE_PIECE or item.type.casefold() in cls._dresses
 
     @staticmethod
     def _seasonFor(day: date) -> Season:
