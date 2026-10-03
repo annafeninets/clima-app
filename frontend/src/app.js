@@ -1,12 +1,12 @@
 import { ApiError, request } from "./core/api.js";
 import { state, clearSession, STORAGE_KEYS } from "./core/state.js";
-import { renderAuth, submitAuth, toggleAuthMode, logout } from "./features/auth.js";
+import { renderAuth, submitAuth, toggleAuthMode, logout } from "./features/auth.js?v=20261003-6";
 import {
   composeOutfit, renderFavorites, renderHistory, renderHome, renderPlan, saveComposedOutfit, submitPlan
 } from "./features/outfits.js";
 import {
-  changeLaundry, deleteItem, openItemForm, renderWardrobe, saveItem
-} from "./features/wardrobe.js";
+  changeLaundry, deleteItem, openItemForm, renderWardrobe
+} from "./features/wardrobe.js?v=20261003-9";
 import {
   renderSettings, saveNotifications, saveProfile, subscribePush
 } from "./features/settings.js";
@@ -15,10 +15,19 @@ import { loadingError, shell } from "./ui/layout.js";
 
 const app = document.querySelector("#app");
 
+function mountAuth() {
+  app.innerHTML = renderAuth();
+  app.querySelector("#auth-form")?.addEventListener("submit", (event) => submitAuth(event, render));
+  app.querySelector('[data-action="toggle-auth"]')?.addEventListener("click", () => {
+    toggleAuthMode();
+    mountAuth();
+  });
+}
+
 async function render() {
   document.documentElement.dataset.theme = state.theme;
   if (!state.token) {
-    app.innerHTML = renderAuth();
+    mountAuth();
     return;
   }
 
@@ -64,11 +73,6 @@ async function handleAction(element, event) {
     if (action === "retry") return render();
     if (action === "go-wardrobe") { state.page = "wardrobe"; return render(); }
     if (action === "go-plan") { state.page = "plan"; return render(); }
-    if (action === "toggle-auth") {
-      toggleAuthMode();
-      app.innerHTML = renderAuth();
-      return;
-    }
     if (action === "open-item") return openItemForm();
     if (action === "compose-outfit") return composeOutfit();
     if (action === "close-modal" || (action === "backdrop" && event.target === element)) {
@@ -181,10 +185,6 @@ document.addEventListener("input", async (event) => {
     input.focus();
     input.setSelectionRange(position, position);
   }
-  if (event.target.id === "api-url") {
-    state.api = event.target.value.trim().replace(/\/+$/, "") || state.api;
-    localStorage.setItem(STORAGE_KEYS.api, state.api);
-  }
   if (event.target.id === "vapid-public-key") {
     state.publicVapidKey = event.target.value.trim();
     localStorage.setItem(STORAGE_KEYS.vapid, state.publicVapidKey);
@@ -197,17 +197,32 @@ document.addEventListener("change", (event) => {
     const label = document.querySelector("#file-label");
     if (label) label.textContent = file ? file.name : "Загрузить фото";
   }
+  if (event.target.closest("#item-form")) {
+    const errors = document.querySelector("#item-form-errors");
+    if (errors) errors.textContent = "";
+  }
+});
+
+document.addEventListener("input", (event) => {
+  if (!event.target.closest("#item-form")) return;
+  const errors = document.querySelector("#item-form-errors");
+  if (errors) errors.textContent = "";
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.querySelector("#modal-root .modal-backdrop")) {
+    document.querySelector("#modal-root").innerHTML = "";
+  }
 });
 
 document.addEventListener("submit", async (event) => {
-  if (event.target.id === "auth-form") await submitAuth(event, render);
-  else if (event.target.id === "item-form") {
-    if (await saveItem(event)) await render();
-  } else if (event.target.id === "plan-form") await submitPlan(event, render);
+  if (event.target.id === "plan-form") await submitPlan(event, render);
   else if (event.target.id === "profile-form") await saveProfile(event, render);
   else if (event.target.id === "notification-form") await saveNotifications(event, render);
   else if (event.target.id === "compose-form") await saveComposedOutfit(event, render);
 });
+
+window.addEventListener("clima:item-saved", render);
 
 window.addEventListener("clima:unauthorized", () => {
   clearSession();

@@ -3,6 +3,141 @@ import { state, PARTS, SEASONS, SEASON_LABELS } from "../core/state.js";
 import { escapeHTML, fileAsDataUrl, icon, itemCountLabel, showToast } from "../ui/helpers.js";
 import { emptyState, heading, shell } from "../ui/layout.js";
 
+const ITEM_SUGGESTIONS = {
+  type: ["Футболка", "Рубашка", "Блузка", "Свитер", "Худи", "Кардиган", "Куртка", "Пальто", "Платье", "Юбка", "Брюки", "Джинсы", "Шорты", "Кроссовки", "Ботинки", "Шарф"],
+  color: ["Белый", "Чёрный", "Серый", "Бежевый", "Коричневый", "Синий", "Голубой", "Зелёный", "Красный", "Розовый", "Жёлтый", "Фиолетовый", "Оранжевый", "Хаки", "Разноцветный"],
+  dressCode: ["casual", "повседневный", "business", "деловой", "sport", "спортивный", "evening", "вечерний", "any"],
+  style: ["Классический", "Casual", "Спортивный", "Минимализм", "Романтический", "Деловой", "Уличный", "Бохо", "Базовый"],
+  material: ["Хлопок", "Лён", "Шерсть", "Кашемир", "Шёлк", "Вискоза", "Полиэстер", "Деним", "Кожа", "Замша", "Трикотаж", "Акрил"],
+  silhouette: ["Прямой", "Свободный", "Приталенный", "Oversize", "Облегающий", "Широкий", "А-силуэт", "Relaxed"]
+};
+
+const ITEM_TEXT_FIELDS = [
+  ["type", "Тип вещи", "Например, футболка"],
+  ["color", "Цвет", "Например, белый"],
+  ["dressCode", "Повод / дресс-код", "Например, повседневный"],
+  ["style", "Стиль", "Например, классический"],
+  ["material", "Материал", "Например, хлопок"],
+  ["silhouette", "Силуэт", "Например, прямой"]
+];
+
+const TOP_TYPE_MARKERS = [
+  "футболк", "рубаш", "блуз", "свитер", "худи", "кардиган", "куртк", "пальто",
+  "плащ", "пиджак", "жилет", "топ", "майк", "свитшот", "кофт", "жакет",
+  "джемпер", "пуловер", "парка", "ветровк", "толстовк", "водолазк", "лонгслив",
+  "футбол", "рубаш", "blouse", "sweater", "hoodie", "jacket", "coat"
+];
+const BOTTOM_TYPE_MARKERS = [
+  "джинс", "брюк", "штан", "юбк", "шорт", "леггинс", "лосин", "капри",
+  "кроссов", "ботин", "сапог", "туфл", "сандал", "кед", "мокасин",
+  "jean", "trouser", "pants", "skirt", "shorts", "legging", "shoe", "boot"
+];
+
+function normalizeSuggestion(value) {
+  return value.trim().toLocaleLowerCase("ru").replaceAll("ё", "е");
+}
+
+export function expectedPartForType(type) {
+  const normalized = normalizeSuggestion(type);
+  const isTop = TOP_TYPE_MARKERS.some((marker) => normalized.includes(marker));
+  const isBottom = BOTTOM_TYPE_MARKERS.some((marker) => normalized.includes(marker));
+  if (isTop && isBottom) return "MIXED";
+  if (isTop) return "TOP";
+  if (isBottom) return "BOTTOM";
+  return "";
+}
+
+export function isValidItemText(value) {
+  return /\p{L}/u.test(value) && /^[\p{L}\p{M}\p{N}\s.,'’()/#%+\-]+$/u.test(value);
+}
+
+function editDistance(left, right) {
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let row = 1; row <= left.length; row += 1) {
+    const current = [row];
+    for (let column = 1; column <= right.length; column += 1) {
+      current[column] = Math.min(
+        current[column - 1] + 1,
+        previous[column] + 1,
+        previous[column - 1] + (left[row - 1] === right[column - 1] ? 0 : 1)
+      );
+    }
+    previous = current;
+  }
+  return previous[right.length];
+}
+
+function suggestionMatches(value, query) {
+  const candidate = normalizeSuggestion(value);
+  if (candidate.startsWith(query)) return 0;
+  if (candidate.includes(query)) return 1;
+  let queryIndex = 0;
+  for (const character of candidate) {
+    if (character === query[queryIndex]) queryIndex += 1;
+    if (queryIndex === query.length) return 2;
+  }
+  const firstWord = candidate.split(/\s+/)[0];
+  return query.length >= 3 && editDistance(query, firstWord) <= Math.max(1, Math.floor(query.length / 4)) ? 3 : -1;
+}
+
+function attachAutocomplete(input, list, candidates) {
+  let activeIndex = -1;
+  const close = () => {
+    list.hidden = true;
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+    activeIndex = -1;
+  };
+  const render = (showAll = false) => {
+    const query = normalizeSuggestion(input.value);
+    const matches = candidates
+      .map((value) => ({ value, score: query ? suggestionMatches(value, query) : 0 }))
+      .filter(({ score }) => score >= 0)
+      .sort((left, right) => left.score - right.score || left.value.localeCompare(right.value, "ru"))
+      .slice(0, 7);
+    if (!matches.length || (!query && !showAll)) {
+      close();
+      return;
+    }
+    activeIndex = -1;
+    list.innerHTML = matches.map(({ value }, index) =>
+      `<button class="autocomplete-option" type="button" role="option" id="${list.id}-option-${index}" aria-selected="false" data-suggestion="${escapeHTML(value)}">${escapeHTML(value)}</button>`
+    ).join("");
+    list.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+  };
+  const choose = (value) => {
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    close();
+  };
+
+  input.addEventListener("focus", () => render(true));
+  input.addEventListener("input", () => render());
+  input.addEventListener("blur", () => window.setTimeout(close, 120));
+  input.addEventListener("keydown", (event) => {
+    const options = [...list.querySelectorAll('[role="option"]')];
+    if (event.key === "Escape") {
+      close();
+    } else if (options.length && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+      event.preventDefault();
+      activeIndex = (activeIndex + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
+      options.forEach((option, index) => {
+        option.setAttribute("aria-selected", String(index === activeIndex));
+      });
+      input.setAttribute("aria-activedescendant", options[activeIndex].id);
+    } else if (event.key === "Enter" && activeIndex >= 0) {
+      event.preventDefault();
+      choose(options[activeIndex].dataset.suggestion);
+    }
+  });
+  list.addEventListener("mousedown", (event) => event.preventDefault());
+  list.addEventListener("click", (event) => {
+    const option = event.target.closest("[data-suggestion]");
+    if (option) choose(option.dataset.suggestion);
+  });
+}
+
 async function itemCard(item) {
   const src = await photoUrl(item.photo);
   const photo = src
@@ -28,27 +163,72 @@ export async function renderWardrobe() {
 
 export function openItemForm(item = {}) {
   const isEdit = Boolean(item.id);
+  const hasExistingPhoto = Boolean(item.photo);
   const checkedSeasons = item.seasons || [];
+  const textFields = ITEM_TEXT_FIELDS.map(([name, label, placeholder]) => {
+    const id = `item-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+    const value = item[name] || (name === "dressCode" ? "casual" : "");
+    const options = [...new Set([
+      ...ITEM_SUGGESTIONS[name],
+      ...state.wardrobe.map((wardrobeItem) => wardrobeItem[name]).filter(Boolean)
+    ])];
+    return {
+      name,
+      label,
+      markup: `<div class="field"><label for="${id}">${label}</label><div class="autocomplete"><input id="${id}" name="${name}" required maxlength="100" value="${escapeHTML(value)}" placeholder="${placeholder}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${id}-suggestions" /><div class="autocomplete-list" id="${id}-suggestions" role="listbox" hidden></div></div></div>`,
+      options
+    };
+  });
+  const textField = (name) => textFields.find((field) => field.name === name).markup;
   const preview = item.photo?.startsWith("data:")
     ? `<div class="field wide"><img src="${escapeHTML(item.photo)}" style="width:84px;height:84px;border-radius:12px;object-fit:cover" alt="Фото вещи" /></div>` : "";
-  const form = `<form id="item-form" data-id="${item.id || ""}"><div class="form-grid">
-    <label class="file-drop wide" for="item-photo">${icon("image")}<span id="file-label">${isEdit ? "Заменить фото (необязательно)" : "Загрузить фото · PNG, JPEG, GIF или WebP, до 5 МБ"}</span><input id="item-photo" name="photo" type="file" accept="image/png,image/jpeg,image/gif,image/webp" ${isEdit ? "" : "required"} /></label>
+  const form = `<form id="item-form" data-id="${item.id || ""}" data-has-photo="${hasExistingPhoto}" novalidate><div class="form-grid">
+    <label class="file-drop wide" for="item-photo" tabindex="-1">${icon("image")}<span id="file-label">${isEdit ? "Заменить фото (необязательно)" : "Загрузить фото · обязательно, до 5 МБ"}</span><input id="item-photo" name="photo" type="file" accept="image/png,image/jpeg,image/gif,image/webp" /></label>
     ${preview}
-    <div class="field"><label for="item-type">Тип вещи</label><input id="item-type" name="type" required maxlength="100" value="${escapeHTML(item.type || "")}" placeholder="Например, футболка" /></div>
-    <div class="field"><label for="item-color">Цвет</label><input id="item-color" name="color" required maxlength="100" value="${escapeHTML(item.color || "")}" placeholder="Например, белый" /></div>
+    ${textField("type")}
+    ${textField("color")}
     <div class="field"><label for="item-part">Часть образа</label><select id="item-part" name="part"><option value="TOP" ${item.part !== "BOTTOM" ? "selected" : ""}>Верх</option><option value="BOTTOM" ${item.part === "BOTTOM" ? "selected" : ""}>Низ</option></select></div>
-    <div class="field"><label for="item-dress">Повод / дресс-код</label><input id="item-dress" name="dressCode" value="${escapeHTML(item.dressCode || "casual")}" maxlength="100" /></div>
+    ${textField("dressCode")}
     <div class="field wide"><span class="field-label">Сезоны</span><div class="season-options">${SEASONS.map((season) => `<label class="season-option"><input type="checkbox" name="seasons" value="${season}" ${checkedSeasons.includes(season) || (!item.id && season !== "WINTER") ? "checked" : ""} /><span>${SEASON_LABELS[season]}</span></label>`).join("")}</div></div>
     <div class="field"><label for="min-temp">От, °C</label><input id="min-temp" name="minTemperature" type="number" required value="${item.minTemperature ?? -10}" /></div>
     <div class="field"><label for="max-temp">До, °C</label><input id="max-temp" name="maxTemperature" type="number" required value="${item.maxTemperature ?? 40}" /></div>
-    <div class="field"><label for="item-style">Стиль</label><input id="item-style" name="style" maxlength="100" value="${escapeHTML(item.style || "")}" /></div>
-    <div class="field"><label for="item-material">Материал</label><input id="item-material" name="material" maxlength="100" value="${escapeHTML(item.material || "")}" /></div>
-    <div class="field"><label for="item-silhouette">Силуэт</label><input id="item-silhouette" name="silhouette" maxlength="100" value="${escapeHTML(item.silhouette || "")}" /></div>
+    ${textField("style")}
+    ${textField("material")}
+    ${textField("silhouette")}
     <div class="field"><label for="item-laundry">Стирка</label><select id="item-laundry" name="inLaundry"><option value="false" ${!item.inLaundry ? "selected" : ""}>Чистая</option><option value="true" ${item.inLaundry ? "selected" : ""}>В стирке</option></select></div>
-    </div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Отмена</button>${isEdit ? `<button class="button danger" type="button" data-action="delete-item" data-id="${item.id}">Удалить</button>` : ""}<button class="button" type="submit">${isEdit ? "Сохранить" : "Добавить в гардероб"}</button></div></form>`;
+    </div><div class="form-errors" id="item-form-errors" role="alert" aria-live="polite"></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Отмена</button>${isEdit ? `<button class="button danger" type="button" data-action="delete-item" data-id="${item.id}">Удалить</button>` : ""}<button class="button" type="submit">${isEdit ? "Сохранить" : "Добавить в гардероб"}</button></div></form>`;
   const root = document.querySelector("#modal-root");
   root.innerHTML = `<div class="modal-backdrop" data-action="backdrop"><section class="modal" role="dialog" aria-modal="true"><header class="modal-header"><div><h2>${isEdit ? "Редактировать вещь" : "Новая вещь"}</h2><p class="page-subtitle">Добавьте фото и характеристики — они помогут подобрать образ.</p></div><button class="modal-close" data-action="close-modal" aria-label="Закрыть">${icon("close")}</button></header>${form}</section></div>`;
-  root.querySelector(".modal").addEventListener("click", (event) => event.stopPropagation());
+  textFields.forEach(({ name, options }) => {
+    const id = `item-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+    attachAutocomplete(root.querySelector(`#${id}`), root.querySelector(`#${id}-suggestions`), options);
+  });
+  root.querySelector("#item-photo")?.addEventListener("change", () => {
+    const errors = root.querySelector("#item-form-errors");
+    if (errors) errors.textContent = "";
+  });
+  const itemForm = root.querySelector("#item-form");
+  itemForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (itemForm.dataset.submitting === "true") return;
+    itemForm.dataset.submitting = "true";
+    const submitButton = itemForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.textContent = "Сохранение…";
+    try {
+      if (await saveItem(event)) window.dispatchEvent(new Event("clima:item-saved"));
+    } catch (error) {
+      const errors = itemForm.querySelector("#item-form-errors");
+      if (errors) errors.textContent = error.message || "Не удалось сохранить вещь.";
+    } finally {
+      if (itemForm.isConnected) {
+        delete itemForm.dataset.submitting;
+        submitButton.disabled = false;
+        submitButton.textContent = isEdit ? "Сохранить" : "Добавить в гардероб";
+      }
+    }
+  });
 }
 
 export async function saveItem(event) {
@@ -57,18 +237,75 @@ export async function saveItem(event) {
   const data = new FormData(form);
   const id = form.dataset.id;
   const file = data.get("photo");
+  const errors = document.querySelector("#item-form-errors");
+  const validTypes = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+  const fileSelected = file instanceof File && file.size > 0;
+  const currentPhotoExists = form.dataset.hasPhoto === "true";
+  const type = String(data.get("type") || "").trim();
+  const color = String(data.get("color") || "").trim();
+  const expectedPart = expectedPartForType(type);
+  const rawMinimum = String(data.get("minTemperature") ?? "").trim();
+  const rawMaximum = String(data.get("maxTemperature") ?? "").trim();
+  const minimum = Number(rawMinimum);
+  const maximum = Number(rawMaximum);
+  const seasons = data.getAll("seasons");
+  const textValues = Object.fromEntries(ITEM_TEXT_FIELDS.map(([name]) =>
+    [name, String(data.get(name) ?? "").trim()]
+  ));
+  let validationError = null;
+
+  if (!fileSelected && !currentPhotoExists) {
+    validationError = { message: "Добавьте фото вещи — оно обязательно.", selector: ".file-drop" };
+  } else if (fileSelected && !validTypes.includes(file.type)) {
+    validationError = { message: "Поддерживаются фотографии PNG, JPEG, GIF и WebP.", selector: ".file-drop" };
+  } else if (fileSelected && file.size > 5 * 1024 * 1024) {
+    validationError = { message: "Размер фотографии не должен превышать 5 МБ.", selector: ".file-drop" };
+  } else if (ITEM_TEXT_FIELDS.some(([name]) => !textValues[name])) {
+    const [name, label] = ITEM_TEXT_FIELDS.find(([field]) => !textValues[field]);
+    validationError = { message: `Заполните поле «${label.toLocaleLowerCase("ru")}».`, selector: `[name="${name}"]` };
+  } else if (ITEM_TEXT_FIELDS.some(([name]) => textValues[name].length > 100)) {
+    const [name, label] = ITEM_TEXT_FIELDS.find(([field]) => textValues[field].length > 100);
+    validationError = { message: `Поле «${label.toLocaleLowerCase("ru")}» не должно превышать 100 символов.`, selector: `[name="${name}"]` };
+  } else if (ITEM_TEXT_FIELDS.some(([name]) => !isValidItemText(textValues[name]))) {
+    const [name, label] = ITEM_TEXT_FIELDS.find(([field]) => !isValidItemText(textValues[field]));
+    validationError = { message: `Проверьте значение поля «${label.toLocaleLowerCase("ru")}»: используйте буквы, цифры и обычные знаки препинания.`, selector: `[name="${name}"]` };
+  } else if (expectedPart === "MIXED") {
+    validationError = { message: "В типе вещи указаны одновременно верх и низ. Укажите одну вещь в одном поле.", selector: '[name="type"]' };
+  } else if (expectedPart && expectedPart !== data.get("part")) {
+    const expectedPartLabel = expectedPart === "TOP" ? "верх" : "низ";
+    validationError = { message: `Тип вещи «${type}» относится к категории «${expectedPartLabel}». Измените часть образа или укажите другой тип вещи.`, selector: "#item-part" };
+  } else if (!["TOP", "BOTTOM"].includes(data.get("part"))) {
+    validationError = { message: "Выберите корректную часть образа.", selector: "#item-part" };
+  } else if (!seasons.length || seasons.some((season) => !SEASONS.includes(season))) {
+    validationError = { message: "Выберите хотя бы один корректный сезон.", selector: '[name="seasons"]' };
+  } else if (rawMinimum === "" || !Number.isSafeInteger(minimum)) {
+    validationError = { message: "Укажите целую минимальную температуру.", selector: "#min-temp" };
+  } else if (rawMaximum === "" || !Number.isSafeInteger(maximum)) {
+    validationError = { message: "Укажите целую максимальную температуру.", selector: "#max-temp" };
+  } else if (minimum < -100 || minimum > 100) {
+    validationError = { message: "Минимальная температура должна быть от −100 до 100 °C.", selector: "#min-temp" };
+  } else if (maximum < -100 || maximum > 100) {
+    validationError = { message: "Максимальная температура должна быть от −100 до 100 °C.", selector: "#max-temp" };
+  } else if (minimum > maximum) {
+    validationError = { message: "Минимальная температура не может быть выше максимальной.", selector: "#min-temp" };
+  }
+
+  if (validationError) {
+    if (errors) errors.textContent = validationError.message;
+    const invalidField = form.querySelector(validationError.selector);
+    invalidField?.focus();
+    invalidField?.scrollIntoView({ block: "center", behavior: "smooth" });
+    return false;
+  }
+
   try {
     let photo = "";
-    if (file instanceof File && file.size) {
-      if (file.size > 5 * 1024 * 1024) throw new Error("Размер фото не должен превышать 5 МБ");
-      photo = await fileAsDataUrl(file);
-    }
+    if (fileSelected) photo = await fileAsDataUrl(file);
     const card = {
-      type: String(data.get("type")).trim(), color: String(data.get("color")).trim(),
-      part: data.get("part"), seasons: data.getAll("seasons"),
-      minTemperature: Number(data.get("minTemperature")), maxTemperature: Number(data.get("maxTemperature")),
-      dressCode: String(data.get("dressCode") || "casual").trim(), style: String(data.get("style") || "").trim(),
-      material: String(data.get("material") || "").trim(), silhouette: String(data.get("silhouette") || "").trim()
+      type, color, part: data.get("part"), seasons,
+      minTemperature: minimum, maxTemperature: maximum,
+      dressCode: textValues.dressCode || "casual", style: textValues.style,
+      material: textValues.material, silhouette: textValues.silhouette
     };
     if (!card.seasons.length) throw new Error("Выберите хотя бы один сезон");
     if (card.minTemperature > card.maxTemperature) throw new Error("Минимальная температура выше максимальной");
@@ -84,7 +321,7 @@ export async function saveItem(event) {
     showToast(id ? "Изменения сохранены" : "Вещь добавлена в гардероб");
     return true;
   } catch (error) {
-    showToast(error.message, true);
+    if (errors) errors.textContent = error.message || "Не удалось сохранить вещь.";
     return false;
   }
 }

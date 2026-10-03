@@ -1,6 +1,3 @@
-# syntax=docker/dockerfile:1
-
-# ---------- stage 1: сборка виртуального окружения ----------
 FROM ghcr.io/astral-sh/uv:0.12 AS uv
 
 FROM python:3.14-slim AS builder
@@ -10,20 +7,17 @@ ENV UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
 
-# Сначала зависимости: слой кэшируется, пока не меняются pyproject.toml / uv.lock.
 COPY pyproject.toml uv.lock README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
 
-# Затем сам проект (не editable, чтобы в runtime хватило одной папки .venv).
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
 
-# ---------- stage 2: минимальный runtime ----------
+
 FROM python:3.14-slim AS runtime
 
-# tzdata нужен zoneinfo: утренние уведомления считаются по часовому поясу пользователя.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends tzdata \
  && rm -rf /var/lib/apt/lists/* \
@@ -42,7 +36,6 @@ ENV PATH="/app/.venv/bin:$PATH" \
     CLIMA_DB_PATH=/data/clima.sqlite3 \
     CLIMA_UPLOADS_PATH=/data/uploads
 
-# Сборка падает сразу, если SQL-схема не попала в пакет.
 RUN python -c "from clima.database.database import Database; assert Database._schema_path.is_file()"
 
 USER clima

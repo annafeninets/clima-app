@@ -1,5 +1,4 @@
 export const STORAGE_KEYS = {
-  api: "clima.api",
   token: "clima.token",
   login: "clima.login",
   theme: "clima.theme",
@@ -11,7 +10,7 @@ export const SEASON_LABELS = { WINTER: "Зима", SPRING: "Весна", SUMMER:
 export const PARTS = { TOP: "Верх", BOTTOM: "Низ" };
 
 export const state = {
-  api: localStorage.getItem(STORAGE_KEYS.api) || window.CLIMA_CONFIG?.apiBaseUrl || "http://127.0.0.1:8000",
+  api: (window.CLIMA_CONFIG?.apiBaseUrl || "http://127.0.0.1:8000").replace(/\/+$/, ""),
   token: localStorage.getItem(STORAGE_KEYS.token) || "",
   login: localStorage.getItem(STORAGE_KEYS.login) || "",
   theme: localStorage.getItem(STORAGE_KEYS.theme) || "LIGHT",

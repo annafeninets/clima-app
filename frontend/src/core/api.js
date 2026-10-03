@@ -22,7 +22,9 @@ export async function request(path, options = {}) {
     if (contentType.includes("json")) {
       try { message = (await response.json()).message || message; } catch { /* Keep the HTTP status message. */ }
     }
-    if (response.status === 401) window.dispatchEvent(new Event("clima:unauthorized"));
+    if (response.status === 401 && state.token) {
+      window.dispatchEvent(new Event("clima:unauthorized"));
+    }
     throw new ApiError(message, response.status);
   }
 
