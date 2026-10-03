@@ -8,8 +8,8 @@ import {
   changeLaundry, deleteItem, openItemForm, renderWardrobe
 } from "./features/wardrobe.js?v=20261004-03";
 import {
-  renderSettings, saveNotifications, saveProfile, subscribePush
-} from "./features/settings.js";
+  renderSettings, saveNotifications, saveProfile, subscribePush, validateProfileFieldInput
+} from "./features/settings.js?v=20261004-04";
 import { showToast } from "./ui/helpers.js";
 import { loadingError, shell } from "./ui/layout.js";
 
@@ -57,7 +57,11 @@ async function render() {
     else if (state.page === "wardrobe") app.innerHTML = await renderWardrobe();
     else if (state.page === "favorites") app.innerHTML = await renderFavorites();
     else if (state.page === "history") app.innerHTML = await renderHistory();
-    else if (state.page === "settings") app.innerHTML = await renderSettings();
+    else if (state.page === "settings") {
+      app.innerHTML = await renderSettings();
+      app.querySelector("#profile-form")?.addEventListener("submit", (event) => saveProfile(event, render));
+      app.querySelector("#notification-form")?.addEventListener("submit", (event) => saveNotifications(event, render));
+    }
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       clearSession();
@@ -185,10 +189,6 @@ document.addEventListener("input", async (event) => {
     input.focus();
     input.setSelectionRange(position, position);
   }
-  if (event.target.id === "vapid-public-key") {
-    state.publicVapidKey = event.target.value.trim();
-    localStorage.setItem(STORAGE_KEYS.vapid, state.publicVapidKey);
-  }
 });
 
 document.addEventListener("change", (event) => {
@@ -211,6 +211,7 @@ document.addEventListener("change", (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  validateProfileFieldInput(event.target);
   const itemForm = event.target.closest("#item-form");
   const formSelector = itemForm ? "#item-form-errors"
     : event.target.closest("#profile-form") ? "#profile-form-errors" : "";
@@ -230,6 +231,10 @@ document.addEventListener("input", (event) => {
   }
 });
 
+document.addEventListener("focusout", (event) => {
+  validateProfileFieldInput(event.target, true);
+});
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && document.querySelector("#modal-root .modal-backdrop")) {
     document.querySelector("#modal-root").innerHTML = "";
@@ -238,8 +243,6 @@ document.addEventListener("keydown", (event) => {
 
 document.addEventListener("submit", async (event) => {
   if (event.target.id === "plan-form") await submitPlan(event, render);
-  else if (event.target.id === "profile-form") await saveProfile(event, render);
-  else if (event.target.id === "notification-form") await saveNotifications(event, render);
   else if (event.target.id === "compose-form") await saveComposedOutfit(event, render);
 });
 

@@ -217,6 +217,7 @@ h3 { font-size: 17px; margin-bottom: 6px; }
 .field textarea { min-height: 86px; resize: vertical; }
 .field-hint { color: var(--muted); font-size: 11px; line-height: 1.5; }
 .field-error { color: var(--red); font-size: 11px; line-height: 1.4; }
+#profile-form .field-error:empty { display: none; }
 .item-form .field-error { position: absolute; top: calc(100% + 3px); left: 0; z-index: 1; min-height: 16px; }
 .item-form .field:has(.field-error) { position: relative; }
 .item-form .field[hidden] { display: none; }
