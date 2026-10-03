@@ -1,4 +1,4 @@
-# weather-outfit-bot
+# Clima
 
 # Clima App — Vision
 
@@ -26,6 +26,36 @@ Clima — умный помощник по стилю, который делае
 
 Конечная цель — за пару секунд получить готовый образ из своих вещей и выйти из дома с уверенностью, что выглядишь отлично. Clima экономит время, снимает стресс перед зеркалом и помогает выглядеть хорошо без знаний о моде — достаточно открыть приложение и надеть предложенный комплект.
 
+## Запуск в Docker
+
+Стек из двух контейнеров: `backend` (Python API, данные в томе `clima-data`) и `frontend` (nginx отдаёт статику и проксирует `/api/` на backend, поэтому CORS не нужен).
+
+```bash
+cp .env.example .env
+make secrets          # или: uv run python scripts/gen_secrets.py — VAPID-ключи и токен планировщика
+docker compose up -d --build
+```
+
+Приложение откроется на `http://localhost:8080` (порт и интерфейс задаются `CLIMA_WEB_PORT` и `CLIMA_WEB_BIND` в `.env`). Для доступа извне поставьте перед `frontend` HTTPS-прокси: Web Push работает только по HTTPS (или на localhost).
+
+| Переменная | Назначение |
+| --- | --- |
+| `CLIMA_VAPID_PRIVATE_KEY`, `CLIMA_VAPID_SUBJECT` | backend: отправка Web Push |
+| `CLIMA_VAPID_PUBLIC_KEY` | frontend: публичный ключ для подписки (попадает в `config.js` при старте контейнера) |
+| `CLIMA_SCHEDULER_TOKEN` | заголовок `X-Scheduler-Token` для ручного запуска рассылки |
+| `CLIMA_PUBLIC_API_URL` | адрес API для браузера, по умолчанию `/api` |
+| `CLIMA_CORS_ORIGINS` | нужен только если frontend открыт с другого origin, чем API |
+
+Что важно знать:
+
+- Без `.env` стек поднимется, но push-уведомления будут отключены (в логе backend будет предупреждение).
+- Маршрут `/internal/scheduler/morning` через nginx закрыт (`/api/internal/` отдаёт 404). Утренняя рассылка работает фоновым потоком backend; ручной запуск возможен только изнутри сети compose.
+- Контейнер backend запускается от непривилегированного пользователя, с read-only корневой ФС; пишет только в `/data` (SQLite и фотографии).
+- `docker stop` корректно завершает backend по SIGTERM: останавливается планировщик, закрывается база.
+- Резервная копия базы и фотографий: `make backup` (файлы в `./backups`). Восстановление — остановить стек, положить `clima.sqlite3` и содержимое `uploads/` в том `clima-data`.
+- Обновление: `git pull && docker compose up -d --build`. Данные в томе сохраняются, схема БД создаётся автоматически (`CREATE TABLE IF NOT EXISTS`).
+- Пересоздание VAPID-ключей (`--force`) делает уже оформленные push-подписки недействительными: пользователям нужно заново включить уведомления.
+
 ## Backend
 
 Backend реализован на Python 3.14 без привязки к веб-фреймворку. HTTP API использует стандартный `ThreadingHTTPServer`, SQLite хранит аккаунты, сессии, вещи, аутфиты и избранное; фотографии сохраняются в отдельном каталоге.
@@ -35,7 +65,7 @@ uv sync
 uv run clima
 ```
 
-По умолчанию API доступен на `http://127.0.0.1:8000`; `GET /health` проверяет доступность. Переменные `CLIMA_HOST`, `CLIMA_PORT`, `CLIMA_DB_PATH`, `CLIMA_UPLOADS_PATH` и `CLIMA_CORS_ORIGINS` задают адрес, хранилища и разрешённые CORS-origin. Регистрация принимает JSON с `login`, `password` и `confirm`; вход — с `login` и `password`. Защищённые маршруты требуют заголовок `Authorization: Bearer <token>`.
+По умолчанию API доступен на `http://127.0.0.1:8000`; `GET /health` проверяет доступность сервера и базы данных (503, если база недоступна). Переменные `CLIMA_HOST`, `CLIMA_PORT`, `CLIMA_DB_PATH`, `CLIMA_UPLOADS_PATH` и `CLIMA_CORS_ORIGINS` задают адрес, хранилища и разрешённые CORS-origin. Регистрация принимает JSON с `login`, `password` и `confirm`; вход — с `login` и `password`. Защищённые маршруты требуют заголовок `Authorization: Bearer <token>`.
 
 Маршруты сгруппированы по авторизации (`/auth/*`), профилю и настройкам (`/profile`, `/settings`, `/push/subscriptions`, `/account`), гардеробу (`/wardrobe/*`), подбору и истории (`/outfits/*`), избранному (`/favorites/*`) и внутреннему планировщику (`/internal/scheduler/morning`). После `POST /wardrobe/items` клиент получает путь сохранённого фото и передаёт его вместе с характеристиками в `PUT /wardrobe/items/draft`. Фото можно отправлять base64 в JSON или бинарным телом `application/octet-stream`; поддерживаются PNG, JPEG, GIF и WebP размером до 5 МБ. Прогноз загружается через Open-Meteo; недавний сохранённый прогноз используется при временном сбое сервиса. Для Web Push задайте `CLIMA_VAPID_PRIVATE_KEY` и `CLIMA_VAPID_SUBJECT`. Фоновый планировщик проверяет локальное время уведомлений; ручной запуск доступен через `POST /internal/scheduler/morning` с заголовком `X-Scheduler-Token`, заданным через `CLIMA_SCHEDULER_TOKEN`.
 
@@ -43,7 +73,7 @@ Backend сохраняет фото и проверенные пользоват
 
 Успешные запросы возвращают JSON-конверт `{ "success": true, "message": "...", "data": ... }`; ошибки содержат `success: false`, `message` и HTTP-статус.
 
-Проверка backend-тестов: `uv run python -m unittest discover -s tests -v`.
+Проверка backend-тестов: `uv run python -m unittest discover -s tests -v` (или `make test`). В тестах есть проверка HTTP-границы и корректной остановки процесса по SIGTERM.
 
 ## Frontend
 

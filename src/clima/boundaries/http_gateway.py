@@ -28,7 +28,7 @@ def create_handler(
 
         def do_GET(self):
             if urlsplit(self.path).path == "/health":
-                self._write(Response.ok({"status": "ok"}))
+                self._health()
                 return
             self._dispatch()
 
@@ -46,6 +46,15 @@ def create_handler(
             self._cors_headers()
             self.send_header("Content-Length", "0")
             self.end_headers()
+
+        def _health(self):
+            try:
+                application.database.query("SELECT 1")
+            except Exception:
+                logger.exception("Health check failed: database is unavailable")
+                self._write(Response.error("База данных недоступна", 503, "service_unavailable"))
+                return
+            self._write(Response.ok({"status": "ok"}))
 
         def _dispatch(self):
             try:

@@ -10,3 +10,4 @@ uploads/
 .idea/
 .ruff_cache/
 .DS_Store
+backups/

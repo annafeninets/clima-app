@@ -1,12 +1,26 @@
-.venv
+# VCS / IDE / окружение
 .git
+.gitignore
+.gitattributes
 .idea
+.venv
 .ruff_cache
 __pycache__
-*.py[oc]
-__MACOSX
+*.py[cod]
 .DS_Store
-tests
-uploads
-clima.sqlite3*
+__MACOSX
+
+# секреты и данные никогда не попадают в образ
 .env
+.env.*
+!.env.example
+clima.sqlite3*
+uploads
+
+# не нужно backend-образу
+frontend
+tests
+scripts
+.github
+docker-compose*.yml
+Makefile

@@ -1,12 +1,44 @@
+name: clima
+
 services:
-  clima:
+  backend:
     build: .
+    image: clima-backend:latest
     restart: unless-stopped
-    env_file: .env
-    ports:
-      - "127.0.0.1:8000:8000"
+    init: true
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Нужен только если frontend открывается с другого origin, чем API.
+      CLIMA_CORS_ORIGINS: ${CLIMA_CORS_ORIGINS:-http://localhost:8080}
     volumes:
       - clima-data:/data
+    expose:
+      - "8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s
+
+  frontend:
+    build: ./frontend
+    image: clima-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      CLIMA_PUBLIC_API_URL: ${CLIMA_PUBLIC_API_URL:-/api}
+      CLIMA_VAPID_PUBLIC_KEY: ${CLIMA_VAPID_PUBLIC_KEY:-}
+    ports:
+      - "${CLIMA_WEB_BIND:-127.0.0.1}:${CLIMA_WEB_PORT:-8080}:80"
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   clima-data:
