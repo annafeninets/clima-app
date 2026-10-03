@@ -305,18 +305,22 @@ class BackendTests(unittest.TestCase):
         hat.validate()
 
     def test_item_without_silhouette_field_is_valid_when_not_applicable(self):
-        shoe = item_from_data({
-            "type": "Лоферы",
-            "color": "Чёрный",
-            "part": "SHOES",
-            "seasons": ["SPRING"],
-            "minTemperature": 0,
-            "maxTemperature": 20,
-            "dressCode": "повседневный",
-            "style": "Классический",
-            "material": "Кожа",
-        }, userId=1)
-        shoe.validate()
+        for item_type in ("Лоферы", "Балетки"):
+            with self.subTest(item_type=item_type):
+                item = item_from_data({
+                    "type": item_type,
+                    "color": "Чёрный",
+                    "part": "SHOES",
+                    "seasons": ["SPRING"],
+                    "minTemperature": 0,
+                    "maxTemperature": 20,
+                    "dressCode": "повседневный",
+                    "style": "Классический",
+                    "material": "Кожа",
+                    "silhouette": "Прямой",
+                }, userId=1)
+                self.assertEqual(item.silhouette, "")
+                item.validate()
 
     def test_generated_outfit_can_include_matching_shoes(self):
         session = self.app.authController.validateSession(self.token)

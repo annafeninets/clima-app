@@ -39,10 +39,10 @@ def item_from_data(data: dict, userId: int, existing: Item | None = None) -> Ite
         maximum = int(values.get("maxTemperature", base.maxTemperature))
     except (ValueError, TypeError) as error:
         raise ValidationError("Температура должна быть целым числом") from error
-    silhouette = _string_value(
-        values,
-        "silhouette",
-        base.silhouette if SILHOUETTES_BY_CATEGORY[silhouette_category_for_type(item_type)] else "",
+    silhouette_options = SILHOUETTES_BY_CATEGORY[silhouette_category_for_type(item_type)]
+    silhouette = (
+        _string_value(values, "silhouette", base.silhouette)
+        if silhouette_options else ""
     )
     return Item(
         id=base.id, userId=userId, createdAt=base.createdAt,

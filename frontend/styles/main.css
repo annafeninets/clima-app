@@ -297,6 +297,9 @@ h3 { font-size: 17px; margin-bottom: 6px; }
 .file-drop { min-height: 102px; display: grid; place-items: center; border: 1px dashed var(--line); border-radius: 13px; background: var(--surface-muted); text-align: center; padding: 15px; color: var(--muted); cursor: pointer; }
 .file-drop svg { width: 21px; margin-bottom: 5px; }
 .file-drop input { display: none; }
+.photo-preview { display: flex; }
+.photo-preview[hidden] { display: none; }
+.photo-preview img { width: 220px; height: 220px; max-width: 100%; border-radius: 12px; object-fit: cover; }
 .auth-screen { min-height: 100vh; display: grid; grid-template-columns: 1.1fr .9fr; background: var(--surface); }
 .auth-visual { min-height: 100vh; padding: 6vw; background: var(--green); color: var(--butter); display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
 .auth-visual::before, .auth-visual::after { content: ""; position: absolute; border-radius: 50%; background: rgb(253 251 242 / 16%); }

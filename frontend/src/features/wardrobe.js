@@ -17,11 +17,20 @@ const ITEM_SUGGESTIONS = {
     "Перчатки", "Носки", "Колготки", "Ремень", "Сумка"
   ],
   color: [
-    "Белый", "Молочный", "Чёрный", "Серый", "Светло-серый", "Тёмно-серый", "Бежевый",
-    "Песочный", "Коричневый", "Шоколадный", "Синий", "Тёмно-синий", "Голубой",
-    "Бирюзовый", "Зелёный", "Оливковый", "Хаки", "Красный", "Бордовый", "Розовый",
-    "Пудровый", "Жёлтый", "Горчичный", "Оранжевый", "Фиолетовый", "Сиреневый",
-    "Золотой", "Серебряный", "Разноцветный"
+    "Белый", "Снежно-белый", "Молочный", "Слоновая кость", "Чёрный", "Угольный",
+    "Графитовый", "Серый", "Светло-серый", "Тёмно-серый", "Стальной", "Серебристый",
+    "Бежевый", "Светло-бежевый", "Тёмно-бежевый", "Песочный", "Кремовый", "Карамельный",
+    "Кэмел", "Тауп", "Коричневый", "Светло-коричневый", "Тёмно-коричневый",
+    "Шоколадный", "Каштановый", "Кофейный", "Коньячный", "Синий", "Светло-синий",
+    "Тёмно-синий", "Небесно-голубой", "Голубой", "Лазурный", "Бирюзовый", "Мятный",
+    "Зелёный", "Светло-зелёный", "Тёмно-зелёный", "Изумрудный", "Травяной",
+    "Оливковый", "Хаки", "Шалфейный", "Красный", "Алый", "Коралловый", "Бордовый",
+    "Вишнёвый", "Терракотовый", "Розовый", "Светло-розовый", "Тёмно-розовый",
+    "Пудровый", "Пыльно-розовый", "Фуксия", "Малиновый", "Персиковый", "Жёлтый",
+    "Светло-жёлтый", "Лимонный", "Горчичный", "Золотой", "Оранжевый", "Рыжий",
+    "Ржавый", "Фиолетовый", "Светло-фиолетовый", "Тёмно-фиолетовый", "Сиреневый",
+    "Лавандовый", "Сливовый", "Индиго", "Лиловый", "Серебряный", "Бронзовый",
+    "Медный", "Разноцветный", "В полоску", "В клетку", "С принтом"
   ],
   dressCode: [
     "casual", "повседневный", "business", "деловой", "sport", "спортивный",
@@ -52,7 +61,7 @@ const ITEM_SUGGESTIONS = {
 
 const ITEM_TEXT_FIELDS = [
   ["type", "Тип вещи", "Например, футболка"],
-  ["color", "Цвет", "Например, белый"],
+  ["color", "Цвет", "Например, небесно-голубой"],
   ["dressCode", "Повод / дресс-код", "Например, повседневный"],
   ["style", "Стиль", "Например, классический"],
   ["material", "Материал", "Например, хлопок"],
@@ -192,6 +201,10 @@ function itemOptions(name, type = "", part = "") {
   ].map((option) => [normalizeSuggestion(option), option])).values()];
 }
 
+function hasSilhouetteOptions(type, part = "") {
+  return itemOptions("silhouette", type, part).length > 0;
+}
+
 function isValidItemOption(value, options) {
   return isValidItemText(value) && options.some(
     (option) => normalizeSuggestion(option) === normalizeSuggestion(value)
@@ -201,7 +214,7 @@ function isValidItemOption(value, options) {
 function itemTextFieldError(name, value, type, part) {
   const [, label] = ITEM_TEXT_FIELDS.find(([fieldName]) => fieldName === name);
   const options = itemOptions(name, type, part);
-  if (name === "silhouette" && !options.length) return "";
+  if (name === "silhouette" && !hasSilhouetteOptions(type, part)) return "";
   if (!value) return `Заполните поле «${label.toLocaleLowerCase("ru")}».`;
   if (value.length > 100) return `Поле «${label.toLocaleLowerCase("ru")}» не должно превышать 100 символов.`;
   if (!isValidItemOption(value, options)) {
@@ -339,8 +352,7 @@ export function openItemForm(item = {}) {
     };
   });
   const textField = (name) => textFields.find((field) => field.name === name).markup;
-  const preview = item.photo?.startsWith("data:")
-    ? `<div class="field wide"><img src="${escapeHTML(item.photo)}" style="width:84px;height:84px;border-radius:12px;object-fit:cover" alt="Фото вещи" /></div>` : "";
+  const preview = `<div class="photo-preview wide" id="item-photo-preview" ${item.photo ? "" : "hidden"}><img alt="Предпросмотр фото вещи" /></div>`;
   const form = `<form id="item-form" class="item-form" data-id="${item.id || ""}" data-has-photo="${hasExistingPhoto}" novalidate><div class="form-grid item-form-grid">
     <label class="file-drop wide" for="item-photo" tabindex="-1">${icon("image")}<span id="file-label">${isEdit ? "Заменить фото (необязательно)" : "Загрузить фото · обязательно, до 5 МБ"}</span><input id="item-photo" name="photo" type="file" accept="image/png,image/jpeg,image/gif,image/webp" /></label>
     ${preview}
@@ -358,6 +370,15 @@ export function openItemForm(item = {}) {
     </div><div class="form-errors" id="item-form-errors" role="alert" aria-live="polite"></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Отмена</button>${isEdit ? `<button class="button danger" type="button" data-action="delete-item" data-id="${item.id}">Удалить</button>` : ""}<button class="button" type="submit">${isEdit ? "Сохранить" : "Добавить в гардероб"}</button></div></form>`;
   const root = document.querySelector("#modal-root");
   root.innerHTML = `<div class="modal-backdrop" data-action="backdrop"><section class="modal" role="dialog" aria-modal="true"><header class="modal-header"><div><h2>${isEdit ? "Редактировать вещь" : "Новая вещь"}</h2><p class="page-subtitle">Добавьте фото и характеристики — они помогут подобрать образ.</p></div><button class="modal-close" data-action="close-modal" aria-label="Закрыть">${icon("close")}</button></header>${form}</section></div>`;
+  const photoPreview = root.querySelector("#item-photo-preview");
+  const photoPreviewImage = photoPreview.querySelector("img");
+  if (item.photo) {
+    photoUrl(item.photo).then((src) => {
+      if (src && photoPreviewImage.isConnected && !root.querySelector("#item-photo").files.length) {
+        photoPreviewImage.src = src;
+      } else if (!src && photoPreviewImage.isConnected) photoPreview.hidden = true;
+    });
+  }
   const typeInput = root.querySelector("#item-type");
   const refreshTypeDependentFields = () => {
     for (const name of ["dressCode", "style", "material", "silhouette"]) {
@@ -366,7 +387,7 @@ export function openItemForm(item = {}) {
       const list = root.querySelector(`#${input.id}-suggestions`);
       const options = itemOptions(name, typeInput.value, root.querySelector("#item-part").value);
       if (name === "silhouette") {
-        const supported = options.length > 0;
+        const supported = hasSilhouetteOptions(typeInput.value, root.querySelector("#item-part").value);
         field.hidden = !supported;
         input.disabled = !supported;
         input.required = supported;
@@ -416,9 +437,24 @@ export function openItemForm(item = {}) {
     refreshTypeDependentFields();
   });
   refreshTypeDependentFields();
-  root.querySelector("#item-photo")?.addEventListener("change", () => {
+  root.querySelector("#item-photo")?.addEventListener("change", async (event) => {
+    const input = event.currentTarget;
     const errors = root.querySelector("#item-form-errors");
     if (errors) errors.textContent = "";
+    const file = input.files?.[0];
+    if (!file) {
+      photoPreview.hidden = true;
+      photoPreviewImage.removeAttribute("src");
+      return;
+    }
+    try {
+      const previewUrl = await fileAsDataUrl(file);
+      if (input.files?.[0] !== file || !photoPreviewImage.isConnected) return;
+      photoPreviewImage.src = previewUrl;
+      photoPreview.hidden = false;
+    } catch (error) {
+      if (errors) errors.textContent = error.message || "Не удалось открыть фото.";
+    }
   });
   const itemForm = root.querySelector("#item-form");
   itemForm.addEventListener("submit", async (event) => {
@@ -505,10 +541,14 @@ export async function saveItem(event) {
   const minimum = Number(rawMinimum);
   const maximum = Number(rawMaximum);
   const seasons = data.getAll("seasons");
+  const silhouetteApplicable = hasSilhouetteOptions(type, String(data.get("part") || ""));
   const textValues = Object.fromEntries(ITEM_TEXT_FIELDS.map(([name]) =>
-    [name, String(data.get(name) ?? "").trim()]
+    [name, name === "silhouette" && !silhouetteApplicable
+      ? ""
+      : String(data.get(name) ?? "").trim()]
   ));
   const invalidTextFields = ITEM_TEXT_FIELDS.flatMap(([name, label]) => {
+    if (name === "silhouette" && !silhouetteApplicable) return [];
     const value = textValues[name];
     const message = itemTextFieldError(
       name, value, type, String(data.get("part") || "")
@@ -518,6 +558,11 @@ export async function saveItem(event) {
   ITEM_TEXT_FIELDS.forEach(([name]) => {
     const input = form.elements.namedItem(name);
     const error = form.querySelector(`#${input.id}-error`);
+    if (name === "silhouette" && !silhouetteApplicable) {
+      input.setAttribute("aria-invalid", "false");
+      error.textContent = "";
+      return;
+    }
     const fieldError = invalidTextFields.find((invalid) => invalid.name === name);
     input.setAttribute("aria-invalid", String(Boolean(fieldError)));
     error.textContent = fieldError?.message || "";
@@ -600,7 +645,15 @@ export async function saveItem(event) {
     showToast(id ? "Изменения сохранены" : "Вещь добавлена в гардероб");
     return true;
   } catch (error) {
-    if (errors) errors.textContent = error.message || "Не удалось сохранить вещь.";
+    const message = error.message || "Не удалось сохранить вещь.";
+    if (
+      !silhouetteApplicable &&
+      normalizeSuggestion(message).includes("заполните поле") &&
+      normalizeSuggestion(message).includes("силуэт")
+    ) {
+      if (errors) errors.textContent =
+        "Backend запущен со старой проверкой. Перезапустите backend и повторите сохранение.";
+    } else if (errors) errors.textContent = message;
     return false;
   }
 }

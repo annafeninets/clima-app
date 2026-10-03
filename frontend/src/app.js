@@ -3,10 +3,10 @@ import { state, clearSession, STORAGE_KEYS } from "./core/state.js";
 import { renderAuth, submitAuth, toggleAuthMode, logout } from "./features/auth.js?v=20261003-6";
 import {
   composeOutfit, renderFavorites, renderHistory, renderHome, renderPlan, saveComposedOutfit, submitPlan
-} from "./features/outfits.js";
+} from "./features/outfits.js?v=20261004-02";
 import {
   changeLaundry, deleteItem, openItemForm, renderWardrobe
-} from "./features/wardrobe.js?v=20261003-13";
+} from "./features/wardrobe.js?v=20261004-03";
 import {
   renderSettings, saveNotifications, saveProfile, subscribePush
 } from "./features/settings.js";
