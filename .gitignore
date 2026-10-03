@@ -1,0 +1,12 @@
+__pycache__/
+*.py[oc]
+.venv/
+build/
+dist/
+*.egg-info/
+clima.sqlite3*
+uploads/
+.env
+.idea/
+.ruff_cache/
+.DS_Store

@@ -1,0 +1,19 @@
+[project]
+name = "clima"
+version = "0.1.0"
+description = "Weather-aware digital wardrobe and outfit recommendation backend"
+readme = "README.md"
+authors = [
+    { name = "Kim Dariya", email = "dkim5354@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "pywebpush>=2.0.3,<3",
+]
+
+[project.scripts]
+clima = "clima.main:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"

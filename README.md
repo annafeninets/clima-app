@@ -1,6 +1,6 @@
 # weather-outfit-bot
 
-# Clima — Vision
+# Clima App — Vision
 
 ## Предметная область
 
@@ -25,3 +25,20 @@ Clima — это веб-приложение, которое превращае�
 Clima — умный помощник по стилю, который делает утренний выбор одежды быстрым и приятным. Приложение учится на предпочтениях и оценках пользователя, постепенно понимая его вкус, и со временем учитывает не только погоду, но и повод, время суток и сезон.
 
 Конечная цель — за пару секунд получить готовый образ из своих вещей и выйти из дома с уверенностью, что выглядишь отлично. Clima экономит время, снимает стресс перед зеркалом и помогает выглядеть хорошо без знаний о моде — достаточно открыть приложение и надеть предложенный комплект.
+
+## Backend
+
+Backend реализован на Python 3.14 без привязки к веб-фреймворку. HTTP API использует стандартный `ThreadingHTTPServer`, SQLite хранит аккаунты, сессии, вещи, аутфиты и избранное; фотографии сохраняются в отдельном каталоге.
+
+```bash
+uv sync
+uv run clima
+```
+
+По умолчанию API доступен на `http://127.0.0.1:8000`. Переменные `CLIMA_HOST`, `CLIMA_PORT`, `CLIMA_DB_PATH` и `CLIMA_UPLOADS_PATH` задают адрес сервера и места хранения. Закрытые маршруты требуют заголовок `Authorization: Bearer <token>`. Регистрация и вход принимают JSON с `login`, `password` и (для регистрации) `confirm`.
+
+Основные маршруты: `/auth/register`, `/auth/login`, `/profile`, `/settings`, `/wardrobe`, `/wardrobe/items`, `/outfits/plan`, `/outfits/today`, `/outfits/history` и `/favorites`. Закрытые запросы передают токен сессии в заголовке `Authorization` по схеме Bearer. Фото передаётся как base64-строка в JSON. Прогноз загружается через Open-Meteo. Push доставляется через Web Push; для него настройте `CLIMA_VAPID_PRIVATE_KEY` и `CLIMA_VAPID_SUBJECT`. Фоновый планировщик автоматически проверяет локальное время уведомлений; ручной запуск рассылки доступен через `POST /internal/scheduler/morning` с заголовком `X-Scheduler-Token` (секрет задаётся переменной `CLIMA_SCHEDULER_TOKEN`).
+
+Проверка backend-тестов: `uv run python -m unittest discover -s tests -v`.
+
+Структура следует UML-слоям: `models`, `handlers`, `controllers`, `repositories`, `database`, `integrations` и `boundaries`. Сущности разнесены по `models/entities/`, репозитории по файлам для соответствующих коллекций, преобразование строк БД вынесено в `repositories/mappers.py`. В `boundaries/http_gateway.py` находится HTTP-адаптер, в `api.py` — маршрутизация backend-запросов, а `main.py` только загружает конфигурацию и запускает сервер. SQL-схема хранится отдельно в `database/schema.sql`; переменные окружения собираются в `config.py`.

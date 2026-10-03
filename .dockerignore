@@ -1,0 +1,12 @@
+.venv
+.git
+.idea
+.ruff_cache
+__pycache__
+*.py[oc]
+__MACOSX
+.DS_Store
+tests
+uploads
+clima.sqlite3*
+.env
