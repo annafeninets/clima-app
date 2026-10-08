@@ -3,17 +3,19 @@
 from datetime import date
 import json
 import logging
-from threading import RLock
-from time import monotonic
+from time import time
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from clima.cache import Cache, MemoryCache
 from clima.errors import ServiceUnavailableError, ValidationError
 from clima.integrations.openweather import OpenWeatherClient, OpenWeatherMiss
 from clima.models.value_objects import WeatherData
 
 logger = logging.getLogger(__name__)
+
+LOCATION_TTL_SECONDS = 30 * 24 * 3600
 
 
 class WeatherService:
@@ -31,14 +33,12 @@ class WeatherService:
 
     def __init__(
         self, timeout: float = 2.0, cacheSeconds: float = 600.0,
-        openWeather: OpenWeatherClient | None = None,
+        openWeather: OpenWeatherClient | None = None, cache: Cache | None = None,
     ):
         self.timeout = timeout
         self.openWeather = openWeather
         self.cacheSeconds = cacheSeconds
-        self._lock = RLock()
-        self._locations: dict[str, tuple[float, dict]] = {}
-        self._forecasts: dict[tuple[str, date], tuple[float, WeatherData]] = {}
+        self.cache: Cache = cache if cache is not None else MemoryCache()
 
     def getWeather(self, location: str) -> WeatherData:
         return self.getForecast(location, date.today())
@@ -46,15 +46,12 @@ class WeatherService:
     def getForecast(self, place: str, date: date) -> WeatherData:
         if not place.strip():
             raise ValidationError("Укажите место для прогноза погоды")
-        cache_key = (place.strip().casefold(), date)
-        with self._lock:
-            cached = self._forecasts.get(cache_key)
-            if cached and cached[0] > monotonic():
-                return cached[1]
+        cached = self._recall(place, date)
+        if cached and cached[0] > time():
+            return cached[1]
         try:
             result = self._fetchForecast(place, date)
-            with self._lock:
-                self._forecasts[cache_key] = (monotonic() + self.cacheSeconds, result)
+            self._remember(place, date, result)
             return result
         except ValidationError:
             raise
@@ -62,16 +59,13 @@ class WeatherService:
             ServiceUnavailableError, URLError, TimeoutError, OSError, AttributeError,
             KeyError, IndexError, TypeError, ValueError,
         ) as error:
-            now = monotonic()
-            with self._lock:
-                cached = self._forecasts.get(cache_key)
-                if cached and cached[0] + self.cacheSeconds > now:
-                    logger.warning(
-                        "Using cached weather for %s on %s after provider failure",
-                        place,
-                        date,
-                    )
-                    return cached[1]
+            # Запись живёт в кеше 2 × cacheSeconds: вторая половина срока — «устаревший, но лучше чем ничего».
+            stale = self._recall(place, date)
+            if stale:
+                logger.warning(
+                    "Using cached weather for %s on %s after provider failure", place, date,
+                )
+                return stale[1]
             if isinstance(error, ServiceUnavailableError):
                 raise
             raise ServiceUnavailableError("Сервис прогноза погоды временно недоступен") from error
@@ -112,11 +106,13 @@ class WeatherService:
         )
 
     def _getLocation(self, place: str) -> dict:
-        key = place.strip().casefold()
-        with self._lock:
-            cached = self._locations.get(key)
-            if cached and cached[0] > monotonic():
-                return cached[1]
+        key = f"weather:om-geo:{place.strip().casefold()}"
+        cached = self.cache.get(key)
+        if cached:
+            try:
+                return json.loads(cached)
+            except ValueError:
+                pass
         geo = self._get_json(
             self.geocodingUrl, {"name": place, "count": 1, "language": "ru"}
         )
@@ -124,9 +120,35 @@ class WeatherService:
         if not locations:
             raise ValidationError(f"Не удалось найти место: {place}")
         location = locations[0]
-        with self._lock:
-            self._locations[key] = (monotonic() + 30 * 24 * 3600, location)
+        self.cache.set(key, json.dumps(location, ensure_ascii=False), LOCATION_TTL_SECONDS)
         return location
+
+    @staticmethod
+    def _forecastKey(place: str, day: date) -> str:
+        return f"weather:forecast:{place.strip().casefold()}:{day.isoformat()}"
+
+    def _remember(
+        self, place: str, day: date, data: WeatherData, freshUntil: float | None = None,
+    ) -> None:
+        payload = json.dumps({
+            "freshUntil": time() + self.cacheSeconds if freshUntil is None else freshUntil,
+            "place": data.place, "date": data.date.isoformat(),
+            "temperature": data.temperature, "conditions": data.conditions,
+        }, ensure_ascii=False)
+        self.cache.set(self._forecastKey(place, day), payload, 2 * self.cacheSeconds)
+
+    def _recall(self, place: str, day: date) -> tuple[float, WeatherData] | None:
+        raw = self.cache.get(self._forecastKey(place, day))
+        if not raw:
+            return None
+        try:
+            payload = json.loads(raw)
+            return float(payload["freshUntil"]), WeatherData(
+                place=payload["place"], date=date.fromisoformat(payload["date"]),
+                temperature=int(payload["temperature"]), conditions=payload["conditions"],
+            )
+        except (ValueError, KeyError, TypeError):
+            return None
 
     def _get_json(self, url: str, params: dict) -> dict:
         request = Request(

@@ -10,12 +10,11 @@ from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 import json
 import logging
-from threading import RLock
-from time import monotonic
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from clima.cache import Cache, MemoryCache
 from clima.errors import ServiceUnavailableError
 from clima.models.value_objects import WeatherData
 
@@ -66,14 +65,13 @@ class OpenWeatherClient:
     geocodingUrl = "https://api.openweathermap.org/geo/1.0/direct"
     forecastUrl = "https://api.openweathermap.org/data/2.5/forecast"
 
-    def __init__(self, apiKey: str, timeout: float = 2.0):
+    def __init__(self, apiKey: str, timeout: float = 2.0, cache: Cache | None = None):
         apiKey = apiKey.strip()
         if not apiKey:
             raise ValueError("OpenWeather API key is empty")
         self._apiKey = apiKey
         self.timeout = timeout
-        self._lock = RLock()
-        self._locations: dict[str, tuple[float, dict]] = {}
+        self.cache: Cache = cache if cache is not None else MemoryCache()
         self._authWarned = False
 
     def getForecast(self, place: str, day: date) -> WeatherData:
@@ -117,11 +115,13 @@ class OpenWeatherClient:
         return _CONDITIONS.get(weatherId) or descriptions.get(weatherId) or "неизвестные условия"
 
     def _getLocation(self, place: str) -> dict:
-        key = place.strip().casefold()
-        with self._lock:
-            cached = self._locations.get(key)
-            if cached and cached[0] > monotonic():
-                return cached[1]
+        key = f"weather:ow-geo:{place.strip().casefold()}"
+        cached = self.cache.get(key)
+        if cached:
+            try:
+                return json.loads(cached)
+            except ValueError:
+                pass
         found = self._get_json(self.geocodingUrl, {"q": place.strip(), "limit": 1})
         if not isinstance(found, list) or not found:
             raise OpenWeatherMiss(f"OpenWeather не нашёл место: {place}")
@@ -133,8 +133,7 @@ class OpenWeatherClient:
             }
         except (KeyError, TypeError, ValueError) as error:
             raise ServiceUnavailableError("Ответ геокодера OpenWeather имеет неожиданный формат") from error
-        with self._lock:
-            self._locations[key] = (monotonic() + 30 * 24 * 3600, location)
+        self.cache.set(key, json.dumps(location, ensure_ascii=False), 30 * 24 * 3600)
         return location
 
     def _get_json(self, url: str, params: dict):

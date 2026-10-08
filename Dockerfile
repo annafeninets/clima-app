@@ -33,7 +33,6 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     CLIMA_HOST=0.0.0.0 \
     CLIMA_PORT=8000 \
-    CLIMA_DB_PATH=/data/clima.sqlite3 \
     CLIMA_UPLOADS_PATH=/data/uploads
 
 RUN python -c "from clima.database.database import Database; assert Database._schema_path.is_file()"

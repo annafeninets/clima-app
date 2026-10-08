@@ -1,6 +1,46 @@
 name: clima
 
 services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-clima}
+      POSTGRES_USER: ${POSTGRES_USER:-clima}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в .env (make secrets)}
+    volumes:
+      - clima-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Только кеш: без сохранения на диск, с лимитом памяти и вытеснением старых ключей.
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    security_opt:
+      - no-new-privileges:true
+
   backend:
     build: .
     image: clima-backend:latest
@@ -10,8 +50,15 @@ services:
       - path: .env
         required: false
     environment:
+      CLIMA_DATABASE_URL: postgresql://${POSTGRES_USER:-clima}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-clima}
+      CLIMA_REDIS_URL: redis://redis:6379/0
       # Нужен только если frontend открывается с другого origin, чем API.
       CLIMA_CORS_ORIGINS: ${CLIMA_CORS_ORIGINS:-http://localhost:8080}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - clima-data:/data
     expose:
@@ -41,4 +88,5 @@ services:
       - no-new-privileges:true
 
 volumes:
-  clima-data:
+  clima-data:     # фотографии вещей
+  clima-pgdata:   # данные PostgreSQL

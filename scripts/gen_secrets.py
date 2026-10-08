@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Генерирует секреты Clima и записывает их в .env.
 
-Создаёт пару VAPID-ключей для Web Push и токен внутреннего планировщика.
+Создаёт пару VAPID-ключей для Web Push, токен внутреннего планировщика и пароль PostgreSQL.
 Уже заполненные значения не трогает (без --force). Запуск: `uv run python scripts/gen_secrets.py`
 """
 
@@ -59,6 +59,8 @@ def main() -> int:
         "CLIMA_VAPID_PRIVATE_KEY": private,
         "CLIMA_VAPID_PUBLIC_KEY": public,
         "CLIMA_SCHEDULER_TOKEN": secrets.token_urlsafe(32),
+        # token_urlsafe даёт только A-Za-z0-9-_, поэтому пароль безопасно вставлять в URL подключения.
+        "POSTGRES_PASSWORD": secrets.token_urlsafe(24),
     }
     if args.print_only:
         for key, value in values.items():
@@ -71,6 +73,13 @@ def main() -> int:
             print("Не найден ни .env, ни .env.example", file=sys.stderr)
             return 1
         shutil.copyfile(example, args.env_file)
+    if args.force and any(
+        line.startswith("POSTGRES_PASSWORD=") and line.partition("=")[2].strip()
+        for line in args.env_file.read_text(encoding="utf-8").splitlines()
+    ):
+        # Пароль роли уже записан в том postgres при первом запуске: смена значения в .env
+        # без смены пароля в самой базе лишила бы backend доступа. Поэтому --force его не трогает.
+        del values["POSTGRES_PASSWORD"]
     written = fill_env(args.env_file, values, args.force)
     if written:
         print(f"{args.env_file}: записано {', '.join(written)}")

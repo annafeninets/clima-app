@@ -16,6 +16,7 @@ from urllib.request import Request as HttpRequest, urlopen
 
 from clima.boundaries.http_gateway import ClimaHTTPServer, create_handler
 from clima.container import Application
+from support import TEST_DATABASE_URL, drop_schema, new_schema_name, requires_database
 
 
 def free_port() -> int:
@@ -24,11 +25,13 @@ def free_port() -> int:
         return probe.getsockname()[1]
 
 
+@requires_database
 class GatewayTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         root = Path(self.directory.name)
-        self.app = Application(root / "gateway.sqlite3", root / "uploads")
+        self.schema = new_schema_name()
+        self.app = Application(TEST_DATABASE_URL, root / "uploads", databaseSchema=self.schema)
         self.server = ClimaHTTPServer(
             ("127.0.0.1", 0), create_handler(self.app, ("http://allowed.example",))
         )
@@ -41,6 +44,7 @@ class GatewayTests(unittest.TestCase):
         self.server.server_close()
         self.thread.join(timeout=2)
         self.app.close()
+        drop_schema(self.schema)
         self.directory.cleanup()
 
     def test_health_reports_ok(self):
@@ -50,7 +54,7 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(payload["data"], {"status": "ok"})
 
     def test_health_reports_unavailable_database(self):
-        self.app.database.getConnection().close()
+        self.app.database._pool.close()  # имитируем недоступную базу
         with self.assertRaises(HTTPError) as caught:
             urlopen(f"{self.base}/health", timeout=3)
         self.assertEqual(caught.exception.code, 503)
@@ -95,17 +99,22 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 403)
 
 
+@requires_database
 class ProcessLifecycleTests(unittest.TestCase):
     def test_sigterm_stops_server_gracefully(self):
         if sys.platform == "win32":
             self.skipTest("SIGTERM semantics differ on Windows")
         port = free_port()
+        schema = new_schema_name()
+        self.addCleanup(drop_schema, schema)
         with tempfile.TemporaryDirectory() as directory:
             env = {
                 **os.environ,
                 "CLIMA_HOST": "127.0.0.1",
                 "CLIMA_PORT": str(port),
-                "CLIMA_DB_PATH": str(Path(directory) / "clima.sqlite3"),
+                "CLIMA_DATABASE_URL": TEST_DATABASE_URL,
+                "CLIMA_DB_SCHEMA": schema,
+                "CLIMA_REDIS_URL": "",
                 "CLIMA_UPLOADS_PATH": str(Path(directory) / "uploads"),
             }
             process = subprocess.Popen(

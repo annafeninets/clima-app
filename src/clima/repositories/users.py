@@ -1,27 +1,27 @@
-import json
 from datetime import datetime, time
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from psycopg.types.json import Jsonb
 
 from clima.errors import NotFoundError
 from clima.models.entities import User
 from clima.repositories.base import Repository
-from clima.database.database import Database
 from clima.repositories.mappers import user_from_row
 
 
 class UsersRepository(Repository[User]):
     def findById(self, id: int) -> User | None:
-        rows = self.db.query("SELECT * FROM users WHERE id = ?", (id,))
+        rows = self.db.query("SELECT * FROM users WHERE id = %s", (id,))
         return user_from_row(rows[0]) if rows else None
 
     def findByEmail(self, email: str) -> User | None:
         rows = self.db.query(
-            "SELECT * FROM users WHERE email = ? COLLATE NOCASE", (email.strip(),)
+            "SELECT * FROM users WHERE lower(email) = lower(%s)", (email.strip(),)
         )
         return user_from_row(rows[0]) if rows else None
 
     def findByPhone(self, phone: str) -> User | None:
-        rows = self.db.query("SELECT * FROM users WHERE phone = ?", (phone.strip(),))
+        rows = self.db.query("SELECT * FROM users WHERE phone = %s", (phone.strip(),))
         return user_from_row(rows[0]) if rows else None
 
     def findByEmailOrPhone(self, login: str) -> User | None:
@@ -48,65 +48,64 @@ class UsersRepository(Repository[User]):
         return due
 
     def findNotificationUsers(self) -> list[User]:
-        return [
-            user for row in self.db.query("SELECT * FROM users")
-            if (user := user_from_row(row)).settings.notificationsEnabled
-        ]
+        rows = self.db.query(
+            "SELECT * FROM users WHERE (settings->>'notificationsEnabled')::boolean IS TRUE"
+        )
+        return [user_from_row(row) for row in rows]
 
     def add(self, entity: User) -> None:
-        cursor = self.db.execute(
+        entity.id = self.db.insert(
             """INSERT INTO users(created_at,email,phone,password_hash,location,preferences,settings)
-               VALUES(?,?,?,?,?,?,?)""",
+               VALUES(%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
             (
-                entity.createdAt.isoformat(), entity.email, entity.phone, entity.passwordHash,
-                entity.location, self._preferences(entity), self._settings(entity),
+                entity.createdAt, entity.email, entity.phone, entity.passwordHash,
+                entity.location, Jsonb(self._preferences(entity)), Jsonb(self._settings(entity)),
             ),
         )
-        entity.id = cursor.lastrowid or 0
 
     def update(self, entity: User) -> None:
-        cursor = self.db.execute(
-            """UPDATE users SET email=?,phone=?,password_hash=?,location=?,preferences=?,settings=?
-               WHERE id=?""",
+        result = self.db.execute(
+            """UPDATE users SET email=%s,phone=%s,password_hash=%s,location=%s,
+               preferences=%s,settings=%s WHERE id=%s""",
             (
                 entity.email, entity.phone, entity.passwordHash, entity.location,
-                self._preferences(entity), self._settings(entity), entity.id,
+                Jsonb(self._preferences(entity)), Jsonb(self._settings(entity)), entity.id,
             ),
         )
-        if cursor.rowcount == 0:
+        if result.rowcount == 0:
             raise NotFoundError("Пользователь не найден")
 
     def delete(self, id: int) -> None:
-        self.db.execute("DELETE FROM users WHERE id=?", (id,))
+        self.db.execute("DELETE FROM users WHERE id=%s", (id,))
 
     def saveSession(self, token: str, userId: int, expiresAt: datetime) -> None:
         self.db.execute(
-            "INSERT INTO sessions(token,user_id,expires_at) VALUES(?,?,?)",
-            (token, userId, expiresAt.isoformat()),
+            "INSERT INTO sessions(token,user_id,expires_at) VALUES(%s,%s,%s)",
+            (token, userId, expiresAt),
         )
 
     def findSession(self, token: str):
-        rows = self.db.query("SELECT * FROM sessions WHERE token=?", (token,))
+        rows = self.db.query("SELECT * FROM sessions WHERE token=%s", (token,))
         return rows[0] if rows else None
 
     def deleteSession(self, token: str) -> None:
-        self.db.execute("DELETE FROM sessions WHERE token=?", (token,))
+        self.db.execute("DELETE FROM sessions WHERE token=%s", (token,))
 
     def deleteSessionsByUser(self, userId: int) -> None:
-        self.db.execute("DELETE FROM sessions WHERE user_id=?", (userId,))
+        self.db.execute("DELETE FROM sessions WHERE user_id=%s", (userId,))
 
     @staticmethod
-    def _preferences(entity: User) -> str:
-        return json.dumps({
+    def _preferences(entity: User) -> dict:
+        return {
             "style": entity.preferences.style, "colors": entity.preferences.colors,
             "sizes": entity.preferences.sizes, "bodyFeatures": entity.preferences.bodyFeatures,
-        }, ensure_ascii=False)
+        }
 
     @staticmethod
-    def _settings(entity: User) -> str:
+    def _settings(entity: User) -> dict:
         settings = entity.settings
         subscription = settings.pushSubscription
-        return json.dumps({
+        return {
             "theme": settings.theme.value,
             "notificationsEnabled": settings.notificationsEnabled,
             "notificationTime": settings.notificationTime.isoformat(timespec="minutes"),
@@ -116,4 +115,4 @@ class UsersRepository(Repository[User]):
                 "p256dh": subscription.p256dh,
                 "auth": subscription.auth,
             } if subscription else None),
-        })
+        }

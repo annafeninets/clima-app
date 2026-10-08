@@ -5,11 +5,15 @@ import logging
 from threading import Event, RLock, Thread
 from zoneinfo import ZoneInfo
 
+from clima.cache import Cache, MemoryCache
 from clima.controllers.notifications import NotificationController
 from clima.controllers.outfits import OutfitController
 from clima.errors import AppError, NotEnoughItemsError
 
 logger = logging.getLogger(__name__)
+
+# Отметка «уже отправили» живёт чуть дольше суток: перекрывает любую смену локальной даты.
+DELIVERED_TTL_SECONDS = 36 * 3600
 
 
 class Scheduler:
@@ -18,12 +22,16 @@ class Scheduler:
         scheduleHandler,
         outfitController: OutfitController,
         notificationController: NotificationController,
+        cache: Cache | None = None,
     ):
+        self.cache: Cache = cache if cache is not None else MemoryCache()
         self.scheduleHandler = scheduleHandler
         self.outfitController = outfitController
         self.notificationController = notificationController
         self._stop_event = Event()
         self._trigger_lock = RLock()
+        # Локальная копия страхует от дублей, если Redis недоступен; общий кеш — от дублей после
+        # перезапуска и при нескольких экземплярах backend.
         self._delivered: dict[int, date] = {}
         self._thread: Thread | None = None
 
@@ -48,7 +56,7 @@ class Scheduler:
                 local_date = now.astimezone(ZoneInfo(user.settings.timeZone)).date()
                 if not self.notificationController.hasPushSubscription(user.id):
                     continue
-                if self._delivered.get(user.id) == local_date:
+                if self._isDelivered(user.id, local_date):
                     continue
                 if not user.location.strip():
                     try:
@@ -56,21 +64,34 @@ class Scheduler:
                     except AppError:
                         logger.exception("Не удалось отправить подсказку пользователю %s", user.id)
                     else:
-                        self._delivered[user.id] = local_date
+                        self._markDelivered(user.id, local_date)
                     continue
                 try:
                     outfit = self.outfitController.getTodayOutfit(user.id)
                     self.notificationController.sendMorningOutfit(user.id, outfit)
-                    self._delivered[user.id] = local_date
+                    self._markDelivered(user.id, local_date)
                 except NotEnoughItemsError:
                     try:
                         self.notificationController.sendHint(user.id)
                     except AppError:
                         logger.exception("Не удалось отправить подсказку пользователю %s", user.id)
                     else:
-                        self._delivered[user.id] = local_date
+                        self._markDelivered(user.id, local_date)
                 except AppError:
                     logger.exception("Не удалось отправить утренний аутфит пользователю %s", user.id)
+
+    @staticmethod
+    def _deliveredKey(userId: int, day: date) -> str:
+        return f"scheduler:morning:{userId}:{day.isoformat()}"
+
+    def _isDelivered(self, userId: int, day: date) -> bool:
+        if self._delivered.get(userId) == day:
+            return True
+        return self.cache.get(self._deliveredKey(userId, day)) is not None
+
+    def _markDelivered(self, userId: int, day: date) -> None:
+        self._delivered[userId] = day
+        self.cache.set(self._deliveredKey(userId, day), "1", DELIVERED_TTL_SECONDS)
 
     def _run(self, intervalSeconds: int) -> None:
         while not self._stop_event.is_set():

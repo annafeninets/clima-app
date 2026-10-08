@@ -1,4 +1,4 @@
-import sqlite3
+from psycopg.errors import ForeignKeyViolation, UniqueViolation
 
 from clima.errors import (
     AccessDeniedError,
@@ -48,8 +48,10 @@ class FeedbackController:
         favorite = Favorite(userId=userId, outfitId=outfitId)
         try:
             self.favoritesRepository.add(favorite)
-        except sqlite3.IntegrityError as error:
+        except UniqueViolation as error:
             raise AlreadyFavoriteError("Аутфит уже добавлен в избранное") from error
+        except ForeignKeyViolation as error:
+            raise NotFoundError("Аутфит не найден") from error
         return favorite
 
     def removeFavorite(self, userId: int, favoriteId: int) -> None:

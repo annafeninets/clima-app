@@ -9,6 +9,8 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "pywebpush>=2.0.3,<3",
+    "psycopg[binary,pool]>=3.2.10,<4",
+    "redis>=5,<8",
 ]
 
 [project.scripts]

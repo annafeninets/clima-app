@@ -1,6 +1,7 @@
 import hmac
 import os
 
+from clima.cache import Cache
 from clima.controllers.notifications import NotificationController
 from clima.controllers.outfits import OutfitController
 from clima.controllers.users import AuthController
@@ -13,13 +14,13 @@ from clima.scheduler import Scheduler
 class ScheduleHandler(Handler):
     def __init__(
         self, authController: AuthController, outfitController: OutfitController,
-        notificationController: NotificationController,
+        notificationController: NotificationController, cache: Cache | None = None,
     ):
         super().__init__(authController)
         self.outfitController = outfitController
         self.notificationController = notificationController
         self._scheduler = Scheduler(
-            self, outfitController, notificationController
+            self, outfitController, notificationController, cache
         )
 
     def handle(self, request: Request) -> Response:

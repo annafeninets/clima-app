@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from clima.api import ClimaApi
+from clima.cache import Cache, MemoryCache
 from clima.database.database import Database
 from clima.controllers.feedback import FeedbackController
 from clima.controllers.notifications import NotificationController
@@ -26,11 +27,12 @@ from clima.repositories.users import UsersRepository
 
 class Application:
     def __init__(
-        self, databasePath: str | Path = "clima.sqlite3",
-        photoRoot: str | Path = "uploads", weatherService: WeatherService | None = None,
-        pushService: PushService | None = None,
+        self, databaseUrl: str, photoRoot: str | Path = "uploads",
+        weatherService: WeatherService | None = None, pushService: PushService | None = None,
+        cache: Cache | None = None, databaseSchema: str | None = None, databasePoolMax: int = 10,
     ):
-        self.database = Database.getInstance(databasePath)
+        self.cache: Cache = cache if cache is not None else MemoryCache()
+        self.database = Database.getInstance(databaseUrl, databaseSchema, databasePoolMax)
         self.photoStorage = PhotoStorage(photoRoot)
         self.usersRepository = UsersRepository(self.database)
         self.itemsRepository = ItemsRepository(self.database)
@@ -40,7 +42,7 @@ class Application:
         self.profileController = ProfileController(self.usersRepository)
         self.wardrobeController = WardrobeController(self.itemsRepository, self.photoStorage)
         self.compatibilityRule = CompatibilityRule()
-        self.weatherService = weatherService or WeatherService()
+        self.weatherService = weatherService or WeatherService(cache=self.cache)
         self.pushService = pushService or PushService()
         self.outfitController = OutfitController(
             self.itemsRepository, self.outfitsRepository, self.compatibilityRule,
@@ -63,7 +65,7 @@ class Application:
         )
         scheduleHandler = ScheduleHandler(
             self.authController, self.outfitController,
-            self.notificationController,
+            self.notificationController, self.cache,
         )
         settingsHandler = SettingsHandler(
             self.authController, self.profileController, self.notificationController
@@ -74,3 +76,4 @@ class Application:
 
     def close(self) -> None:
         Database.resetInstance()
+        self.cache.close()

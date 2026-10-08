@@ -6,6 +6,7 @@ import signal
 from threading import Thread
 
 from clima.boundaries.http_gateway import ClimaHTTPServer, create_handler
+from clima.cache import RedisCache, create_cache
 from clima.config import Config
 from clima.container import Application
 from clima.integrations.openweather import OpenWeatherClient
@@ -15,6 +16,10 @@ logger = logging.getLogger("clima")
 
 
 def _warn_about_configuration(config: Config) -> None:
+    if not config.redisUrl:
+        logger.info(
+            "CLIMA_REDIS_URL не задан: кеш погоды и отметки рассылки хранятся в памяти процесса"
+        )
     if not config.openWeatherApiKey:
         logger.info(
             "CLIMA_OPENWEATHER_API_KEY не задан: прогноз берётся только из Open-Meteo"
@@ -34,12 +39,16 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
     _warn_about_configuration(config)
+    cache = create_cache(config.redisUrl)
+    if isinstance(cache, RedisCache) and not cache.ping():
+        logger.warning("Redis по адресу CLIMA_REDIS_URL не отвечает: кеш заработает, когда он появится")
     openWeather = (
-        OpenWeatherClient(config.openWeatherApiKey) if config.openWeatherApiKey else None
+        OpenWeatherClient(config.openWeatherApiKey, cache=cache) if config.openWeatherApiKey else None
     )
     application = Application(
-        databasePath=config.dbPath, photoRoot=config.photoRoot,
-        weatherService=WeatherService(openWeather=openWeather),
+        databaseUrl=config.databaseUrl, photoRoot=config.photoRoot,
+        weatherService=WeatherService(openWeather=openWeather, cache=cache), cache=cache,
+        databaseSchema=config.dbSchema, databasePoolMax=config.dbPoolMax,
     )
     server = ClimaHTTPServer(
         (config.host, config.port), create_handler(application, config.corsOrigins)

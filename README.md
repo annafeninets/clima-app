@@ -28,11 +28,11 @@ Clima — умный помощник по стилю, который делае
 
 ## Запуск в Docker
 
-Стек из двух контейнеров: `backend` (Python API, данные в томе `clima-data`) и `frontend` (nginx отдаёт статику и проксирует `/api/` на backend, поэтому CORS не нужен).
+Стек из четырёх контейнеров: `postgres` (основная база, том `clima-pgdata`), `redis` (кеш погоды и отметок рассылки, без диска), `backend` (Python API, фотографии в томе `clima-data`) и `frontend` (nginx отдаёт статику и проксирует `/api/` на backend, поэтому CORS не нужен).
 
 ```bash
 cp .env.example .env
-make secrets          # или: uv run python scripts/gen_secrets.py — VAPID-ключи и токен планировщика
+make secrets          # или: uv run python scripts/gen_secrets.py — VAPID-ключи, токен планировщика и пароль PostgreSQL
 docker compose up -d --build
 ```
 
@@ -40,6 +40,10 @@ docker compose up -d --build
 
 | Переменная | Назначение |
 | --- | --- |
+| `POSTGRES_PASSWORD` (`POSTGRES_USER`, `POSTGRES_DB`) | пароль и имя роли/базы PostgreSQL; пароль обязателен, его создаёт `make secrets`. Только символы `A-Za-z0-9-_`, он подставляется в URL подключения |
+| `CLIMA_DATABASE_URL` | адрес PostgreSQL для backend; в compose собирается из `POSTGRES_*`, вручную нужен только вне compose |
+| `CLIMA_REDIS_URL` | адрес Redis; в compose `redis://redis:6379/0`. Пусто — кеш в памяти процесса |
+| `CLIMA_DB_POOL_MAX` | максимум соединений backend → PostgreSQL (по умолчанию 10) |
 | `CLIMA_VAPID_PRIVATE_KEY`, `CLIMA_VAPID_SUBJECT` | backend: отправка Web Push |
 | `CLIMA_VAPID_PUBLIC_KEY` | frontend: публичный ключ для подписки (попадает в `config.js` при старте контейнера) |
 | `CLIMA_SCHEDULER_TOKEN` | заголовок `X-Scheduler-Token` для ручного запуска рассылки |
@@ -51,8 +55,38 @@ docker compose up -d --build
 
 - Без `.env` стек поднимется, но push-уведомления будут отключены (в логе backend будет предупреждение).
 - Маршрут `/internal/scheduler/morning` через nginx закрыт (`/api/internal/` отдаёт 404). Утренняя рассылка работает фоновым потоком backend; ручной запуск возможен только изнутри сети compose.
-- Контейнер backend запускается от непривилегированного пользователя, с read-only корневой ФС; пишет только в `/data` (SQLite и фотографии).
+- Контейнер backend запускается от непривилегированного пользователя, с read-only корневой ФС; пишет только в `/data` (фотографии); данные пользователей лежат в PostgreSQL.
 - `docker stop` корректно завершает backend по SIGTERM: останавливается планировщик, закрывается база.
-- Резервная копия базы и фотографий: `make backup` (файлы в `./backups`). Восстановление — остановить стек, положить `clima.sqlite3` и содержимое `uploads/` в том `clima-data`.
-- Обновление: `git pull && docker compose up -d --build`. Данные в томе сохраняются, схема БД создаётся автоматически (`CREATE TABLE IF NOT EXISTS`).
+- Резервная копия базы и фотографий: `make backup` (в `./backups` появятся `clima-*.dump` — `pg_dump` в формате custom — и `uploads-*.tar`). Восстановление: остановить backend (`docker compose stop backend frontend`), затем `docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists' < backups/clima-ДАТА.dump`; фотографии из `uploads-*.tar` распаковать в том `clima-data`.
+- Redis хранит только то, что можно восстановить: прогноз погоды, геокодинг и отметки «утренний аутфит уже отправлен». Если он недоступен, backend пишет предупреждение и работает без кеша (сессии и данные всегда в PostgreSQL).
+- Обновление: `git pull && docker compose up -d --build`. Данные в томах сохраняются, схема БД создаётся автоматически при старте backend (`CREATE TABLE IF NOT EXISTS`, под advisory-lock). Изменения существующих таблиц так не применятся — для них понадобится миграция.
+- `POSTGRES_PASSWORD` читается postgres только при создании тома. Если поменять его в `.env` позже, backend перестанет подключаться: смените пароль и в базе (`docker compose exec postgres psql -U clima -c "ALTER ROLE clima PASSWORD '…'"`). Поэтому `make secrets --force` пароль не перезаписывает.
 - Пересоздание VAPID-ключей (`--force`) делает уже оформленные push-подписки недействительными: пользователям нужно заново включить уведомления.
+
+## Переход со старой версии на SQLite
+
+Если у вас уже есть `clima.sqlite3` в томе `clima-data`, перенесите данные один раз (идентификаторы и сессии сохраняются):
+
+```bash
+docker compose cp backend:/data/clima.sqlite3 ./clima.sqlite3   # backend должен быть запущен старой версией
+make dev-db                                                       # PostgreSQL и Redis на localhost
+uv run python scripts/sqlite_to_postgres.py --sqlite clima.sqlite3 \
+    --database-url postgresql://clima:ПАРОЛЬ@127.0.0.1:5432/clima
+docker compose up -d --build
+```
+
+## Разработка и тесты
+
+```bash
+make dev-db
+export CLIMA_DATABASE_URL=postgresql://clima:ПАРОЛЬ@127.0.0.1:5432/clima
+export CLIMA_REDIS_URL=redis://127.0.0.1:6379/0      # необязательно
+uv run clima
+
+# тестам нужна отдельная база: каждый тест работает в своей временной схеме и удаляет её
+docker compose exec postgres createdb -U clima clima_test
+export CLIMA_TEST_DATABASE_URL=postgresql://clima:ПАРОЛЬ@127.0.0.1:5432/clima_test
+make test
+```
+
+Без `CLIMA_TEST_DATABASE_URL` тесты, которым нужна база, пропускаются; тесты кеша и погоды выполняются всегда.

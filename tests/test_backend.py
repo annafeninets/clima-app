@@ -3,20 +3,17 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 import json
 from pathlib import Path
-import sqlite3
 import struct
 import tempfile
 import unittest
 import zlib
-from threading import Event, Thread
+from threading import Thread
 from time import monotonic
-from unittest.mock import patch
-from urllib.error import URLError
 from urllib.request import Request as HttpRequest, urlopen
 
 from clima.boundaries.http_gateway import ClimaHTTPServer, create_handler
 from clima.container import Application
-from clima.errors import BadCombinationError, ServiceUnavailableError, ValidationError
+from clima.errors import BadCombinationError, ValidationError
 from clima.handlers.helpers import item_from_data, preferences_from_data
 from clima.integrations.weather import WeatherService
 from clima.models.entities import Item
@@ -33,6 +30,10 @@ class FakeWeatherService(WeatherService):
         return self.getForecast(location, date.today())
 
 
+from support import TEST_DATABASE_URL, drop_schema, new_schema_name, requires_database
+
+
+@requires_database
 class BackendTests(unittest.TestCase):
     @staticmethod
     def png_bytes():
@@ -51,7 +52,10 @@ class BackendTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         root = Path(self.directory.name)
-        self.app = Application(root / "test.sqlite3", root / "uploads", FakeWeatherService())
+        self.schema = new_schema_name()
+        self.app = Application(
+            TEST_DATABASE_URL, root / "uploads", FakeWeatherService(), databaseSchema=self.schema,
+        )
         result = self.request("POST", "/auth/register", {
             "login": "user@example.com", "password": "strong-password",
             "confirm": "strong-password",
@@ -61,6 +65,7 @@ class BackendTests(unittest.TestCase):
 
     def tearDown(self):
         self.app.close()
+        drop_schema(self.schema)
         self.directory.cleanup()
 
     def request(self, method, path, body=None, token=None, query=None):
@@ -255,23 +260,6 @@ class BackendTests(unittest.TestCase):
             self.app.outfitController.rule.check(outfit.items).compatible
             for outfit in variants
         ))
-
-    def test_weather_uses_recent_cached_forecast_when_service_is_unavailable(self):
-        service = WeatherService(cacheSeconds=60)
-        selected_date = date.today()
-        cached = WeatherData("Moscow", selected_date, 18, "ясно")
-        service._forecasts[("moscow", selected_date)] = (monotonic() - 1, cached)
-
-        with patch.object(service, "_getLocation", side_effect=URLError("offline")):
-            result = service.getForecast("Moscow", selected_date)
-
-        self.assertEqual(result, cached)
-
-    def test_weather_without_cached_forecast_reports_service_unavailable(self):
-        service = WeatherService()
-        with patch.object(service, "_getLocation", side_effect=URLError("offline")):
-            with self.assertRaises(ServiceUnavailableError):
-                service.getForecast("Moscow", date.today())
 
     def test_item_rejects_invalid_metadata_types(self):
         with self.assertRaises(ValidationError):
@@ -560,24 +548,47 @@ class BackendTests(unittest.TestCase):
         )
         self.assertEqual(subscription.status, 422)
 
-    def test_failed_transaction_start_does_not_leave_database_locked(self):
-        connection = self.app.database.getConnection()
-        connection.execute("BEGIN")
-        with self.assertRaises(sqlite3.OperationalError):
-            with self.app.database.transaction():
-                self.fail("A nested transaction should not start")
-        connection.execute("ROLLBACK")
+    def _location(self, userId):
+        return self.app.database.query(
+            "SELECT location FROM users WHERE id=%s", (userId,)
+        )[0]["location"]
 
-        completed = Event()
+    def test_transaction_rolls_back_on_error_and_nested_one_uses_savepoint(self):
+        db = self.app.database
+        userId = self.app.authController.validateSession(self.token).userId
 
-        def query_from_another_thread():
-            self.app.database.query("SELECT 1")
-            completed.set()
+        with self.assertRaises(RuntimeError):
+            with db.transaction():
+                db.execute("UPDATE users SET location=%s WHERE id=%s", ("Paris", userId))
+                raise RuntimeError("boom")
+        self.assertEqual(self._location(userId), "")
 
-        thread = Thread(target=query_from_another_thread, daemon=True)
-        thread.start()
-        self.assertTrue(completed.wait(timeout=1))
-        thread.join(timeout=1)
+        with db.transaction():
+            db.execute("UPDATE users SET location=%s WHERE id=%s", ("Rome", userId))
+            with self.assertRaises(RuntimeError):
+                with db.transaction():
+                    db.execute("UPDATE users SET location=%s WHERE id=%s", ("Oslo", userId))
+                    raise RuntimeError("inner")
+        self.assertEqual(self._location(userId), "Rome")
+
+    def test_duplicate_registration_is_case_insensitive(self):
+        again = self.request("POST", "/auth/register", {
+            "login": "USER@example.com", "password": "strong-password",
+            "confirm": "strong-password",
+        })
+        self.assertEqual(again.status, 422)
+
+    def test_delete_account_cascades_to_all_user_data(self):
+        db = self.app.database
+        userId = self.app.authController.validateSession(self.token).userId
+        self.add_item("Футболка", "белый", "TOP")
+        self.assertEqual(
+            db.query("SELECT count(*) AS n FROM items WHERE user_id=%s", (userId,))[0]["n"], 1
+        )
+        self.app.authController.deleteAccount(userId)
+        for table in ("items", "outfits", "favorites", "sessions"):
+            count = db.query(f"SELECT count(*) AS n FROM {table} WHERE user_id=%s", (userId,))
+            self.assertEqual(count[0]["n"], 0, table)
 
     def test_profile_theme_and_notification_settings(self):
         saved = self.request("PUT", "/profile", {

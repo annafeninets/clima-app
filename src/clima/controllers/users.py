@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 import re
 import secrets
-import sqlite3
+
+from psycopg.errors import UniqueViolation
 
 from clima.errors import AuthError, ValidationError
 from clima.integrations.photo_storage import PhotoStorage
@@ -42,7 +43,7 @@ class AuthController:
         user.setPassword(password)
         try:
             self.usersRepository.add(user)
-        except sqlite3.IntegrityError as error:
+        except UniqueViolation as error:
             raise ValidationError(Messages.ACCOUNT_EXISTS) from error
         return self._newSession(user)
 
@@ -61,7 +62,7 @@ class AuthController:
         row = self.usersRepository.findSession(token)
         if row is None:
             raise AuthError(Messages.SESSION_EXPIRED)
-        session = Session(token, row["user_id"], datetime.fromisoformat(row["expires_at"]))
+        session = Session(token, row["user_id"], row["expires_at"])
         if session.isExpired():
             self.usersRepository.deleteSession(token)
             raise AuthError(Messages.SESSION_EXPIRED)
