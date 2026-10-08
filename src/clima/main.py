@@ -8,11 +8,17 @@ from threading import Thread
 from clima.boundaries.http_gateway import ClimaHTTPServer, create_handler
 from clima.config import Config
 from clima.container import Application
+from clima.integrations.openweather import OpenWeatherClient
+from clima.integrations.weather import WeatherService
 
 logger = logging.getLogger("clima")
 
 
-def _warn_about_configuration() -> None:
+def _warn_about_configuration(config: Config) -> None:
+    if not config.openWeatherApiKey:
+        logger.info(
+            "CLIMA_OPENWEATHER_API_KEY не задан: прогноз берётся только из Open-Meteo"
+        )
     if not os.environ.get("CLIMA_VAPID_PRIVATE_KEY"):
         logger.warning("CLIMA_VAPID_PRIVATE_KEY не задан: push-уведомления отключены")
     if not os.environ.get("CLIMA_SCHEDULER_TOKEN"):
@@ -27,8 +33,14 @@ def main() -> None:
         level=config.logLevel,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    _warn_about_configuration()
-    application = Application(databasePath=config.dbPath, photoRoot=config.photoRoot)
+    _warn_about_configuration(config)
+    openWeather = (
+        OpenWeatherClient(config.openWeatherApiKey) if config.openWeatherApiKey else None
+    )
+    application = Application(
+        databasePath=config.dbPath, photoRoot=config.photoRoot,
+        weatherService=WeatherService(openWeather=openWeather),
+    )
     server = ClimaHTTPServer(
         (config.host, config.port), create_handler(application, config.corsOrigins)
     )

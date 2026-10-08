@@ -1,4 +1,4 @@
-"""Open-Meteo weather and forecast integration."""
+"""Weather facade: OpenWeather first (when a key is set), Open-Meteo as fallback."""
 
 from datetime import date
 import json
@@ -10,6 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from clima.errors import ServiceUnavailableError, ValidationError
+from clima.integrations.openweather import OpenWeatherClient, OpenWeatherMiss
 from clima.models.value_objects import WeatherData
 
 logger = logging.getLogger(__name__)
@@ -28,8 +29,12 @@ class WeatherService:
         99: "сильная гроза с градом",
     }
 
-    def __init__(self, timeout: float = 2.0, cacheSeconds: float = 600.0):
+    def __init__(
+        self, timeout: float = 2.0, cacheSeconds: float = 600.0,
+        openWeather: OpenWeatherClient | None = None,
+    ):
         self.timeout = timeout
+        self.openWeather = openWeather
         self.cacheSeconds = cacheSeconds
         self._lock = RLock()
         self._locations: dict[str, tuple[float, dict]] = {}
@@ -47,28 +52,7 @@ class WeatherService:
             if cached and cached[0] > monotonic():
                 return cached[1]
         try:
-            location = self._getLocation(place)
-            forecast = self._get_json(self.apiUrl, {
-                "latitude": location["latitude"],
-                "longitude": location["longitude"],
-                "daily": "temperature_2m_min,temperature_2m_max,weather_code",
-                "timezone": "auto",
-                "forecast_days": 16,
-            })
-            days = forecast.get("daily", {}).get("time", [])
-            try:
-                index = days.index(date.isoformat())
-            except ValueError as error:
-                raise ValidationError("Прогноз доступен не более чем на 16 дней вперёд") from error
-            daily = forecast["daily"]
-            temperature = round(
-                (daily["temperature_2m_min"][index] + daily["temperature_2m_max"][index]) / 2
-            )
-            weather_code = daily["weather_code"][index]
-            result = WeatherData(
-                place=location.get("name", place), date=date, temperature=temperature,
-                conditions=self._conditions.get(weather_code, "неизвестные условия"),
-            )
+            result = self._fetchForecast(place, date)
             with self._lock:
                 self._forecasts[cache_key] = (monotonic() + self.cacheSeconds, result)
             return result
@@ -91,6 +75,41 @@ class WeatherService:
             if isinstance(error, ServiceUnavailableError):
                 raise
             raise ServiceUnavailableError("Сервис прогноза погоды временно недоступен") from error
+
+    def _fetchForecast(self, place: str, date: date) -> WeatherData:
+        if self.openWeather is not None:
+            try:
+                return self.openWeather.getForecast(place, date)
+            except OpenWeatherMiss:
+                # Место или дата вне покрытия бесплатного плана (горизонт ~5 суток) — это не сбой.
+                logger.info("OpenWeather has no data for %s on %s, using Open-Meteo", place, date)
+            except ServiceUnavailableError as error:
+                logger.warning("OpenWeather unavailable (%s), using Open-Meteo", error)
+        return self._fetchFromOpenMeteo(place, date)
+
+    def _fetchFromOpenMeteo(self, place: str, date: date) -> WeatherData:
+        location = self._getLocation(place)
+        forecast = self._get_json(self.apiUrl, {
+            "latitude": location["latitude"],
+            "longitude": location["longitude"],
+            "daily": "temperature_2m_min,temperature_2m_max,weather_code",
+            "timezone": "auto",
+            "forecast_days": 16,
+        })
+        days = forecast.get("daily", {}).get("time", [])
+        try:
+            index = days.index(date.isoformat())
+        except ValueError as error:
+            raise ValidationError("Прогноз доступен не более чем на 16 дней вперёд") from error
+        daily = forecast["daily"]
+        temperature = round(
+            (daily["temperature_2m_min"][index] + daily["temperature_2m_max"][index]) / 2
+        )
+        weather_code = daily["weather_code"][index]
+        return WeatherData(
+            place=location.get("name", place), date=date, temperature=temperature,
+            conditions=self._conditions.get(weather_code, "неизвестные условия"),
+        )
 
     def _getLocation(self, place: str) -> dict:
         key = place.strip().casefold()

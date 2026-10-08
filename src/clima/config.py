@@ -11,6 +11,7 @@ class Config:
     dbPath: str = "clima.sqlite3"
     photoRoot: str = "uploads"
     logLevel: str = "INFO"
+    openWeatherApiKey: str = ""
     corsOrigins: tuple[str, ...] = ("http://localhost:3000", "http://localhost:5173")
 
     @classmethod
@@ -27,6 +28,7 @@ class Config:
             dbPath=os.environ.get("CLIMA_DB_PATH", "clima.sqlite3"),
             photoRoot=os.environ.get("CLIMA_UPLOADS_PATH", "uploads"),
             logLevel=os.environ.get("CLIMA_LOG_LEVEL", "INFO").upper(),
+            openWeatherApiKey=os.environ.get("CLIMA_OPENWEATHER_API_KEY", "").strip(),
             corsOrigins=tuple(
                 origin.strip()
                 for origin in os.environ.get(
