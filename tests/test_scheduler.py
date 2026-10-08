@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from types import SimpleNamespace
 import unittest
 from zoneinfo import ZoneInfo
@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from clima.cache import MemoryCache
 from clima.errors import NotEnoughItemsError
 from clima.controllers.notifications import formatMissingText
+from clima.push_limits import pushCountKey, wardrobeHintSentKey
 from clima.scheduler import Scheduler
 
 
@@ -50,7 +51,9 @@ class SchedulerTests(unittest.TestCase):
         self.user = SimpleNamespace(
             id=7,
             location="Moscow",
-            settings=SimpleNamespace(timeZone="Europe/Moscow"),
+            settings=SimpleNamespace(
+                timeZone="Europe/Moscow", notificationTime=time(7, 30)
+            ),
         )
         self.status = {
             "have": {"top": 1, "outerwear": 0, "bottom": 0, "shoes": 0},
@@ -74,15 +77,17 @@ class SchedulerTests(unittest.TestCase):
         self.assertEqual(self.notifications.hints, [(7, ["bottom", "shoes"])])
         self.assertIsNone(self.cache.get(self.scheduler._deliveredKey(7, local_day)))
         self.assertEqual(
-            self.cache.get(self.scheduler._wardrobeHintKey(7, local_day)), "1"
+            self.cache.get(wardrobeHintSentKey(7, local_day)), "1"
         )
+        self.assertEqual(self.cache.get(pushCountKey(7, local_day)), "1")
 
     def test_complete_wardrobe_still_receives_hint_when_no_outfit_can_be_built(self):
         self.status.update({"missing": [], "is_complete": True})
         self.scheduler.triggerMorningBroadcast()
 
         self.assertEqual(self.notifications.hints, [(7, [])])
-        self.assertEqual(len(self.cache._data), 1)
+        local_day = datetime.now(ZoneInfo("Europe/Moscow")).date()
+        self.assertEqual(self.cache.get(pushCountKey(7, local_day)), "1")
 
 
 if __name__ == "__main__":

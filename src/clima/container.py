@@ -68,7 +68,7 @@ class Application:
             self.notificationController, self.cache,
         )
         settingsHandler = SettingsHandler(
-            self.authController, self.profileController, self.notificationController
+            self.authController, self.profileController, self.notificationController, self.cache
         )
         self.api = ClimaApi(
             commandHandler, uploadHandler, callbackHandler, scheduleHandler, settingsHandler

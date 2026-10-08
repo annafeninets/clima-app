@@ -1,6 +1,6 @@
 """Daily local-time notification scheduler."""
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime
 import logging
 from threading import Event, RLock, Thread
 from zoneinfo import ZoneInfo
@@ -9,11 +9,15 @@ from clima.cache import Cache, MemoryCache
 from clima.controllers.notifications import NotificationController
 from clima.controllers.outfits import OutfitController
 from clima.errors import AppError, NotEnoughItemsError
+from clima.push_limits import (
+    MAX_DAILY_PUSHES,
+    pushCountKey,
+    pushSentKey,
+    secondsUntilLocalMidnight,
+    wardrobeHintSentKey,
+)
 
 logger = logging.getLogger(__name__)
-
-# Отметка «уже отправили» живёт чуть дольше суток: перекрывает любую смену локальной даты.
-DELIVERED_TTL_SECONDS = 36 * 3600
 
 
 class Scheduler:
@@ -30,10 +34,6 @@ class Scheduler:
         self.notificationController = notificationController
         self._stop_event = Event()
         self._trigger_lock = RLock()
-        # Локальная копия страхует от дублей, если Redis недоступен; общий кеш — от дублей после
-        # перезапуска и при нескольких экземплярах backend.
-        self._delivered: dict[int, date] = {}
-        self._wardrobe_hint_delivered: dict[int, date] = {}
         self._thread: Thread | None = None
 
     def start(self, intervalSeconds: int = 20) -> None:
@@ -59,22 +59,36 @@ class Scheduler:
                     continue
                 if self._isDelivered(user.id, local_date):
                     continue
+                if not self._canSend(user.id, local_date):
+                    logger.info(
+                        "[push] userId=%s skipped daily limit date=%s",
+                        user.id,
+                        local_date,
+                    )
+                    continue
                 if not user.location.strip():
                     try:
                         self.notificationController.sendHint(user.id)
                     except AppError:
                         logger.exception("Не удалось отправить подсказку пользователю %s", user.id)
                     else:
-                        self._markDelivered(user.id, local_date)
+                        self._markDelivered(user, local_date, now, "daily-outfit")
                     continue
                 try:
                     outfit = self.outfitController.getTodayOutfit(user.id)
                     self.notificationController.sendMorningOutfit(user.id, outfit)
-                    self._markDelivered(user.id, local_date)
+                    self._markDelivered(user, local_date, now, "daily-outfit")
                 except NotEnoughItemsError as error:
                     try:
                         status = self.outfitController.getWardrobeStatus(user.id)
                         if self._isWardrobeHintDelivered(user.id, local_date):
+                            continue
+                        if not self._canSend(user.id, local_date):
+                            logger.info(
+                                "[push] userId=%s skipped wardrobe-hint daily limit date=%s",
+                                user.id,
+                                local_date,
+                            )
                             continue
                         missing = status["missing"]
                         self.notificationController.sendWardrobeHint(user.id, missing)
@@ -83,9 +97,7 @@ class Scheduler:
                     except Exception:
                         logger.exception("Ошибка подготовки подсказки пользователю %s", user.id)
                     else:
-                        self._markWardrobeHintDelivered(
-                            user.id, local_date, user.settings.timeZone, now
-                        )
+                        self._markWardrobeHintDelivered(user, local_date, now)
                         logger.info(
                             "Отправлена подсказка о гардеробе пользователю %s; missing=%s",
                             user.id,
@@ -96,41 +108,77 @@ class Scheduler:
 
     @staticmethod
     def _deliveredKey(userId: int, day: date) -> str:
-        return f"scheduler:morning:{userId}:{day.isoformat()}"
+        return pushSentKey(userId, day)
 
     def _isDelivered(self, userId: int, day: date) -> bool:
-        if self._delivered.get(userId) == day:
-            return True
-        return self.cache.get(self._deliveredKey(userId, day)) is not None
+        return (
+            self.cache.get(self._deliveredKey(userId, day)) is not None
+            or self.cache.get(f"scheduler:morning:{userId}:{day.isoformat()}") is not None
+        )
 
-    def _markDelivered(self, userId: int, day: date) -> None:
-        self._delivered[userId] = day
-        self.cache.set(self._deliveredKey(userId, day), "1", DELIVERED_TTL_SECONDS)
+    def _canSend(self, userId: int, day: date) -> bool:
+        rawCount = self.cache.get(pushCountKey(userId, day))
+        if rawCount is None and not self.cache.ping():
+            logger.error(
+                "[push] userId=%s skipped because the daily limit cache is unavailable",
+                userId,
+            )
+            return False
+        try:
+            count = int(rawCount or 0)
+        except ValueError:
+            logger.error(
+                "[push] userId=%s has an invalid daily push counter",
+                userId,
+            )
+            return False
+        return count < MAX_DAILY_PUSHES
 
-    @staticmethod
-    def _wardrobeHintKey(userId: int, day: date) -> str:
-        return f"wardrobe_hint_sent:{userId}:{day.isoformat()}"
+    def _markDelivered(self, user, day: date, now: datetime, pushType: str) -> None:
+        self._markPushSent(user, day, now)
+        logger.info(
+            "[push] userId=%s type=%s time=%s tz=%s",
+            user.id,
+            pushType,
+            user.settings.notificationTime.strftime("%H:%M"),
+            user.settings.timeZone,
+        )
 
     def _isWardrobeHintDelivered(self, userId: int, day: date) -> bool:
-        if self._wardrobe_hint_delivered.get(userId) == day:
-            return True
-        return self.cache.get(self._wardrobeHintKey(userId, day)) is not None
+        return self.cache.get(wardrobeHintSentKey(userId, day)) is not None
 
-    def _markWardrobeHintDelivered(
-        self, userId: int, day: date, timeZone: str, now: datetime
-    ) -> None:
-        self._wardrobe_hint_delivered[userId] = day
-        zone = ZoneInfo(timeZone)
-        local_now = now.astimezone(zone)
-        next_midnight = datetime.combine(day + timedelta(days=1), time.min, zone)
-        ttl = max(
-            1,
-            (
-                next_midnight.astimezone(timezone.utc)
-                - local_now.astimezone(timezone.utc)
-            ).total_seconds(),
+    def _markWardrobeHintDelivered(self, user, day: date, now: datetime) -> None:
+        self.cache.set(
+            wardrobeHintSentKey(user.id, day),
+            "1",
+            secondsUntilLocalMidnight(now, user.settings.timeZone),
         )
-        self.cache.set(self._wardrobeHintKey(userId, day), "1", ttl)
+        self._markPushCount(user.id, day, now, user.settings.timeZone)
+        logger.info(
+            "[push] userId=%s type=wardrobe-hint time=%s tz=%s",
+            user.id,
+            user.settings.notificationTime.strftime("%H:%M"),
+            user.settings.timeZone,
+        )
+
+    def _markPushSent(self, user, day: date, now: datetime) -> None:
+        self.cache.set(
+            self._deliveredKey(user.id, day),
+            "1",
+            secondsUntilLocalMidnight(now, user.settings.timeZone),
+        )
+        self._markPushCount(user.id, day, now, user.settings.timeZone)
+
+    def _markPushCount(self, userId: int, day: date, now: datetime, timeZone: str) -> None:
+        count = self.cache.increment(
+            pushCountKey(userId, day),
+            secondsUntilLocalMidnight(now, timeZone),
+        )
+        if count is None:
+            logger.error(
+                "[push] userId=%s sent but daily rate-limit counter unavailable",
+                userId,
+            )
 
     def _run(self, intervalSeconds: int) -> None:
         while not self._stop_event.is_set():

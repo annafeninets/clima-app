@@ -48,6 +48,13 @@ class FakeRedis:
         self.calls.append(("set", key, px))
         self.data[key] = value
 
+    def eval(self, script, numkeys, key, ttl):
+        self._check()
+        self.calls.append(("eval", key, ttl))
+        value = int(self.data.get(key, 0)) + 1
+        self.data[key] = str(value)
+        return value
+
     def delete(self, *keys):
         self._check()
         for key in keys:
@@ -77,7 +84,20 @@ class RedisCacheTests(unittest.TestCase):
         cache.set("k", "v", 10)
         cache.delete("k")
         self.assertIsNone(cache.get("k"))
+        self.assertIsNone(cache.increment("counter", 60))
         self.assertFalse(cache.ping())
+
+    def test_increment_is_atomic_and_sets_expiry_on_first_increment(self):
+        fake = FakeRedis()
+        cache = RedisCache("redis://unused", client=fake)
+
+        self.assertEqual(cache.increment("push_count", 60), 1)
+        self.assertEqual(cache.increment("push_count", 30), 2)
+        self.assertEqual(fake.data["clima:push_count"], "2")
+        self.assertEqual(fake.calls, [
+            ("eval", "clima:push_count", 60000),
+            ("eval", "clima:push_count", 30000),
+        ])
 
     def test_factory_uses_memory_cache_without_url(self):
         self.assertIsInstance(create_cache(""), MemoryCache)

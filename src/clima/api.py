@@ -31,6 +31,7 @@ class ClimaApi:
         (r"/settings", "GET", "settingsHandler"),
         (r"/settings/theme", "PUT", "settingsHandler"),
         (r"/settings/notifications", "PUT", "settingsHandler"),
+        (r"/push/settings", "POST", "settingsHandler"),
         (r"/push/subscribe", "POST", "settingsHandler"),
         (r"/push/subscriptions", "POST", "settingsHandler"),
         (r"/push/subscriptions", "DELETE", "settingsHandler"),

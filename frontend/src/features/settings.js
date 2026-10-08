@@ -211,14 +211,17 @@ export async function saveNotifications(event, rerender) {
   };
   try {
     localStorage.setItem(STORAGE_KEYS.timeZone, settings.timeZone);
+    let result;
     if (settings.enabled) {
       const subscription = await getCurrentSubscription();
-      if (subscription) await sendSubscriptionToServer(subscription, settings);
-      else await request("/settings/notifications", { method: "PUT", body: settings });
+      if (subscription) result = await sendSubscriptionToServer(subscription, settings);
+      else result = await request("/settings/notifications", { method: "PUT", body: settings });
     } else {
-      await request("/settings/notifications", { method: "PUT", body: settings });
+      result = await request("/settings/notifications", { method: "PUT", body: settings });
     }
-    showToast("Настройки сохранены");
+    showToast(result?.limit_reached
+      ? "Достигнут лимит уведомлений на сегодня"
+      : "Настройки сохранены", Boolean(result?.limit_reached));
     await rerender();
   } catch { showToast("Не удалось сохранить настройки. Проверьте данные и попробуйте ещё раз.", true); }
 }
@@ -278,8 +281,10 @@ async function enableNotifications(form, rerender) {
     const settings = currentFormSettings(form);
     localStorage.setItem(STORAGE_KEYS.timeZone, settings.timeZone);
     const subscription = await subscribeToPush(state.publicVapidKey);
-    await sendSubscriptionToServer(subscription, settings);
-    showToast("Уведомления подключены");
+    const result = await sendSubscriptionToServer(subscription, settings);
+    showToast(result?.limit_reached
+      ? "Достигнут лимит уведомлений на сегодня"
+      : "Уведомления подключены", Boolean(result?.limit_reached));
     await rerender();
   } catch {
     toggle.checked = false;

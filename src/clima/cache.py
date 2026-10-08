@@ -20,6 +20,8 @@ class Cache(Protocol):
 
     def set(self, key: str, value: str, ttlSeconds: float) -> None: ...
 
+    def increment(self, key: str, ttlSeconds: float) -> int | None: ...
+
     def delete(self, *keys: str) -> None: ...
 
     def ping(self) -> bool: ...
@@ -50,6 +52,17 @@ class MemoryCache:
             if key not in self._data and len(self._data) >= self.maxEntries:
                 self._evict()
             self._data[key] = (monotonic() + ttlSeconds, value)
+
+    def increment(self, key: str, ttlSeconds: float) -> int:
+        with self._lock:
+            current = self.get(key)
+            value = int(current or 0) + 1
+            if current is None:
+                self.set(key, str(value), ttlSeconds)
+            else:
+                expires, _ = self._data[key]
+                self._data[key] = (expires, str(value))
+            return value
 
     def delete(self, *keys: str) -> None:
         with self._lock:
@@ -102,6 +115,21 @@ class RedisCache:
             self._redis.set(self._prefix + key, value, px=max(1, int(ttlSeconds * 1000)))
         except Exception as error:
             self._warn("set", error)
+
+    def increment(self, key: str, ttlSeconds: float) -> int | None:
+        try:
+            result = self._redis.eval(
+                "local n=redis.call('INCR',KEYS[1]); "
+                "if n==1 then redis.call('PEXPIRE',KEYS[1],ARGV[1]); end; "
+                "return n",
+                1,
+                self._prefix + key,
+                max(1, int(ttlSeconds * 1000)),
+            )
+            return int(result)
+        except Exception as error:
+            self._warn("increment", error)
+            return None
 
     def delete(self, *keys: str) -> None:
         if not keys:

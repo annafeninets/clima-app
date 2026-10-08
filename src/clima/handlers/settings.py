@@ -1,6 +1,8 @@
-from datetime import time
+from datetime import datetime, time, timezone
+import logging
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from clima.cache import Cache, MemoryCache
 from clima.controllers.notifications import NotificationController
 from clima.controllers.profile import ProfileController
 from clima.controllers.users import AuthController
@@ -9,6 +11,12 @@ from clima.handlers.base import Handler
 from clima.handlers.helpers import parse_time, preferences_from_data, push_subscription
 from clima.models.enums import Actions, Theme
 from clima.models.value_objects import Request, Response
+from clima.push_limits import (
+    MAX_DAILY_PUSHES, localDate, pushCountKey, pushSentKey, secondsUntilLocalMidnight,
+    wardrobeHintSentKey,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class SettingsHandler(Handler):
@@ -17,10 +25,12 @@ class SettingsHandler(Handler):
         authController: AuthController,
         profileController: ProfileController,
         notificationController: NotificationController,
+        cache: Cache | None = None,
     ):
         super().__init__(authController)
         self.profileController = profileController
         self.notificationController = notificationController
+        self.cache = cache if cache is not None else MemoryCache()
 
     def handle(self, request: Request) -> Response:
         if request.path.startswith("/auth/"):
@@ -57,24 +67,12 @@ class SettingsHandler(Handler):
                 raise ValidationError("Тема должна быть LIGHT или DARK") from error
             self.profileController.setTheme(userId, theme)
             return Response.ok(message="Тема применена")
-        if request.path == "/settings/notifications" and request.method == "PUT":
-            enabled = request.body.get("enabled")
-            if not isinstance(enabled, bool):
-                raise ValidationError("Поле enabled должно быть boolean")
-            zone = None
-            if request.body.get("timeZone") is not None:
-                zone = str(request.body["timeZone"])
-                try:
-                    ZoneInfo(zone)
-                except (ZoneInfoNotFoundError, ValueError) as error:
-                    raise ValidationError("Некорректный часовой пояс") from error
-            self.handleNotificationChange(
-                enabled, parse_time(request.body.get("time", "07:00")), userId
-            )
-            if zone is not None:
-                self.profileController.setTimeZone(userId, zone)
-            settings = self.profileController.getSettings(userId)
-            return Response.ok(settings, "Настройки уведомлений сохранены")
+        if (
+            request.path == "/settings/notifications" and request.method == "PUT"
+        ) or (
+            request.path == "/push/settings" and request.method == "POST"
+        ):
+            return self._savePushSettings(userId, request.body)
         if request.path == "/push/subscriptions" and request.method == "POST":
             self.notificationController.subscribePush(userId, push_subscription(request.body))
             return Response.ok(message="Push-подписка сохранена")
@@ -85,6 +83,7 @@ class SettingsHandler(Handler):
             parsedSubscription = push_subscription(subscription)
             notificationTime = None
             zone = None
+            subscriptionSettings = None
             if "time" in request.body or "timezone" in request.body:
                 if "time" not in request.body or "timezone" not in request.body:
                     raise ValidationError("Укажите время и часовой пояс")
@@ -96,10 +95,13 @@ class SettingsHandler(Handler):
                     ZoneInfo(zone)
                 except (ZoneInfoNotFoundError, ValueError) as error:
                     raise ValidationError("Некорректный часовой пояс") from error
-            self.notificationController.subscribePush(
-                userId, parsedSubscription, notificationTime, zone
-            )
-            return Response.ok(message="Push-подписка сохранена")
+                subscriptionSettings = self._savePushSettings(userId, {
+                    "enabled": True,
+                    "time": notificationTime.isoformat(),
+                    "timeZone": zone,
+                })
+            self.notificationController.subscribePush(userId, parsedSubscription)
+            return subscriptionSettings or Response.ok(message="Push-подписка сохранена")
         if request.path == "/push/subscriptions" and request.method == "DELETE":
             self.notificationController.unsubscribePush(userId)
             return Response.ok(message="Push-подписка удалена")
@@ -115,6 +117,96 @@ class SettingsHandler(Handler):
             self.authController.endSession(userId)
             return Response.ok(message="Сессия завершена")
         raise ValidationError("Неизвестный раздел настроек")
+
+    def _savePushSettings(self, userId: int, body: dict) -> Response:
+        enabled = body.get("enabled")
+        if not isinstance(enabled, bool):
+            raise ValidationError("Поле enabled должно быть boolean")
+        notificationTime = parse_time(body.get("time", "07:00"))
+        oldSettings = self.profileController.getSettings(userId)
+        rawZone = body.get("timeZone", body.get("timezone", oldSettings.timeZone))
+        if not isinstance(rawZone, str) or not rawZone.strip():
+            raise ValidationError("Некорректный часовой пояс")
+        zone = rawZone.strip()
+        try:
+            ZoneInfo(zone)
+        except (ZoneInfoNotFoundError, ValueError) as error:
+            raise ValidationError("Некорректный часовой пояс") from error
+
+        timeChanged = oldSettings.notificationTime != notificationTime
+        zoneChanged = oldSettings.timeZone != zone
+        now = datetime.now(timezone.utc)
+        oldDay = localDate(now, oldSettings.timeZone)
+        newDay = localDate(now, zone)
+        oldCountKey = pushCountKey(userId, oldDay)
+        newCountKey = pushCountKey(userId, newDay)
+        oldCount = int(self.cache.get(oldCountKey) or 0)
+        newCount = int(self.cache.get(newCountKey) or 0)
+        dailyCount = max(oldCount, newCount)
+        if zoneChanged and oldDay != newDay and dailyCount:
+            self.cache.set(
+                newCountKey,
+                str(dailyCount),
+                secondsUntilLocalMidnight(now, zone),
+            )
+
+        localNow = now.astimezone(ZoneInfo(zone))
+        requestedMinute = notificationTime.hour * 60 + notificationTime.minute
+        currentMinute = localNow.hour * 60 + localNow.minute
+        timeStillAhead = requestedMinute >= currentMinute
+        changed = timeChanged or zoneChanged
+        cacheAvailable = self.cache.ping() if changed and timeStillAhead else True
+        reset = (
+            changed and timeStillAhead and cacheAvailable
+            and dailyCount < MAX_DAILY_PUSHES
+        )
+        limitReached = changed and dailyCount >= MAX_DAILY_PUSHES
+
+        self.notificationController.setMorningNotification(
+            userId, enabled, notificationTime, zone
+        )
+        if reset:
+            oldKeys = (
+                pushSentKey(userId, oldDay),
+                wardrobeHintSentKey(userId, oldDay),
+                f"scheduler:morning:{userId}:{oldDay.isoformat()}",
+            )
+            newKeys = (
+                pushSentKey(userId, newDay),
+                wardrobeHintSentKey(userId, newDay),
+                f"scheduler:morning:{userId}:{newDay.isoformat()}",
+            )
+            self.cache.delete(*set(oldKeys + newKeys))
+            resetReasons = []
+            if timeChanged:
+                resetReasons.append("time_changed")
+            if zoneChanged:
+                resetReasons.append("timezone_changed")
+            logger.info(
+                "[push] userId=%s flag reset reason=%s old=%s new=%s old_tz=%s new_tz=%s",
+                userId,
+                "_and_".join(resetReasons),
+                oldSettings.notificationTime.strftime("%H:%M"),
+                notificationTime.strftime("%H:%M"),
+                oldSettings.timeZone,
+                zone,
+            )
+        elif limitReached:
+            logger.info(
+                "[push] userId=%s notification settings changed; daily limit reached (%s)",
+                userId,
+                MAX_DAILY_PUSHES,
+            )
+        elif changed and timeStillAhead and not cacheAvailable:
+            logger.error(
+                "[push] userId=%s could not reset daily flag because the cache is unavailable",
+                userId,
+            )
+        return Response.ok({
+            "ok": True,
+            "reset": reset,
+            "limit_reached": limitReached,
+        }, "Настройки уведомлений сохранены")
 
     def _auth(self, request: Request) -> Response:
         if request.path == "/auth/logout" and request.method == "POST":

@@ -1,6 +1,6 @@
 import base64
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date
+from datetime import date, datetime, timezone
 import json
 from pathlib import Path
 import struct
@@ -21,6 +21,7 @@ from clima.models.entities import Item
 from clima.models.entities.item import expected_part_for_type
 from clima.models.enums import ItemPart, Season
 from clima.models.value_objects import OutfitFilter, Request, WeatherData
+from clima.push_limits import pushCountKey, pushSentKey
 
 
 class FakeWeatherService(WeatherService):
@@ -607,6 +608,50 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(settings.data.theme.value, "DARK")
         self.assertEqual(settings.data.notificationTime.isoformat(timespec="minutes"), "07:30")
         self.assertEqual(settings.data.timeZone, "Europe/Moscow")
+
+    def test_changing_notification_time_resets_daily_flag_only_when_under_limit(self):
+        user_id = self.app.authController.validateSession(self.token).userId
+        now = datetime.now(timezone.utc)
+        target_time = "23:59"
+        day = now.date()
+        key = pushSentKey(user_id, day)
+        self.app.cache.set(key, "1", 3600)
+
+        changed = self.request("POST", "/push/settings", {
+            "enabled": True, "time": target_time, "timezone": "UTC",
+        }, self.token)
+
+        self.assertTrue(changed.success)
+        self.assertTrue(changed.data["reset"])
+        self.assertFalse(changed.data["limit_reached"])
+        self.assertIsNone(self.app.cache.get(key))
+
+        new_key = pushSentKey(user_id, day)
+        self.app.cache.set(new_key, "1", 3600)
+        unchanged = self.request("POST", "/push/settings", {
+            "enabled": True, "time": target_time, "timezone": "UTC",
+        }, self.token)
+
+        self.assertFalse(unchanged.data["reset"])
+        self.assertEqual(self.app.cache.get(new_key), "1")
+
+    def test_daily_push_limit_prevents_resetting_notification_flag(self):
+        user_id = self.app.authController.validateSession(self.token).userId
+        now = datetime.now(timezone.utc)
+        target_time = "23:59"
+        day = now.date()
+        sent_key = pushSentKey(user_id, day)
+        self.app.cache.set(sent_key, "1", 3600)
+        self.app.cache.set(pushCountKey(user_id, day), "3", 3600)
+
+        response = self.request("POST", "/push/settings", {
+            "enabled": True, "time": target_time, "timezone": "UTC",
+        }, self.token)
+
+        self.assertTrue(response.success)
+        self.assertFalse(response.data["reset"])
+        self.assertTrue(response.data["limit_reached"])
+        self.assertEqual(self.app.cache.get(sent_key), "1")
 
     def test_wardrobe_status_counts_available_categories(self):
         initial = self.request("GET", "/wardrobe/status", token=self.token)

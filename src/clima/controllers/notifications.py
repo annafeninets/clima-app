@@ -29,9 +29,13 @@ class NotificationController:
         self.usersRepository = usersRepository
         self.pushService = pushService
 
-    def setMorningNotification(self, userId: int, enabled: bool, time: time) -> None:
+    def setMorningNotification(
+        self, userId: int, enabled: bool, time: time, timeZone: str | None = None
+    ) -> None:
         user = self._user(userId)
         user.setNotification(enabled, time)
+        if timeZone is not None:
+            user.settings.timeZone = timeZone
         self.usersRepository.update(user)
 
     def subscribePush(

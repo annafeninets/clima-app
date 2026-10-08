@@ -10,7 +10,7 @@ import {
 import {
   connectPush, handleNotificationToggle, renderSettings, saveNotifications, saveProfile,
   validateProfileFieldInput
-} from "./features/settings.js?v=20261008-06";
+} from "./features/settings.js?v=20261008-07";
 import { showToast } from "./ui/helpers.js";
 import { loadingError, shell } from "./ui/layout.js";
 
