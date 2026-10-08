@@ -81,11 +81,16 @@ class NotificationController:
         if not user.settings.notificationsEnabled or user.settings.pushSubscription is None:
             return
         categories = ",".join(missing)
+        body = (
+            formatMissingText(missing)
+            if missing
+            else "Не удалось собрать образ. Проверьте, что вещи доступны и подходят погоде."
+        )
         self.pushService.send(
             user.settings.pushSubscription,
             "Добавьте вещи в гардероб",
-            formatMissingText(missing),
-            f"/wardrobe?missing={categories}",
+            body,
+            f"/wardrobe?missing={categories}" if categories else "/wardrobe",
             "wardrobe-hint",
         )
 

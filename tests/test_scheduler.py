@@ -77,12 +77,12 @@ class SchedulerTests(unittest.TestCase):
             self.cache.get(self.scheduler._wardrobeHintKey(7, local_day)), "1"
         )
 
-    def test_complete_wardrobe_does_not_receive_a_shortage_hint(self):
+    def test_complete_wardrobe_still_receives_hint_when_no_outfit_can_be_built(self):
         self.status.update({"missing": [], "is_complete": True})
         self.scheduler.triggerMorningBroadcast()
 
-        self.assertEqual(self.notifications.hints, [])
-        self.assertEqual(self.cache._data, {})
+        self.assertEqual(self.notifications.hints, [(7, [])])
+        self.assertEqual(len(self.cache._data), 1)
 
 
 if __name__ == "__main__":

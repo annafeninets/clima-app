@@ -74,12 +74,6 @@ class Scheduler:
                 except NotEnoughItemsError as error:
                     try:
                         status = self.outfitController.getWardrobeStatus(user.id)
-                        if status["is_complete"]:
-                            logger.info(
-                                "Не отправляем подсказку пользователю %s: гардероб уже полон",
-                                user.id,
-                            )
-                            continue
                         if self._isWardrobeHintDelivered(user.id, local_date):
                             continue
                         missing = status["missing"]
