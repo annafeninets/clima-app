@@ -1,5 +1,5 @@
 import { request } from "../core/api.js";
-import { state, saveSession } from "../core/state.js";
+import { state, saveSession } from "../core/state.js?v=20261008-02";
 import { escapeHTML, icon, showToast } from "../ui/helpers.js";
 
 export function renderAuth() {

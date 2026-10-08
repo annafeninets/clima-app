@@ -1,5 +1,5 @@
 import { request } from "../core/api.js";
-import { state, STORAGE_KEYS } from "../core/state.js";
+import { state, STORAGE_KEYS } from "../core/state.js?v=20261008-02";
 import { escapeHTML, showToast } from "../ui/helpers.js";
 import { heading, shell } from "../ui/layout.js";
 

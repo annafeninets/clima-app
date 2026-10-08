@@ -17,6 +17,7 @@ class ItemPart(StrEnum):
     TOP = "TOP"
     BOTTOM = "BOTTOM"
     SHOES = "SHOES"
+    OUTERWEAR = "OUTERWEAR"
     ACCESSORY = "ACCESSORY"
     ONE_PIECE = "ONE_PIECE"
 

@@ -10,6 +10,7 @@ from clima.errors import (
     ValidationError,
 )
 from clima.models.entities import Item, Outfit, Preferences
+from clima.models.entities.item import accessory_category_for_type, expected_part_for_type
 from clima.models.enums import ItemPart, Season
 from clima.models.value_objects import CheckResult, Messages, OutfitFilter, WeatherData
 from clima.repositories.items import ItemsRepository
@@ -43,23 +44,57 @@ class CompatibilityRule:
     }
     _neutrals = {"black", "white", "gray", "beige", "brown", "navy"}
     _dresses = {"dress", "jumpsuit", "комбинезон", "платье"}
+    _scarves = ("шарф", "scarf")
 
     def check(self, items: list[Item]) -> CheckResult:
         available = [item for item in items if item.isAvailable()]
         if not available:
             return CheckResult(False, "Нет доступных вещей")
         one_pieces = [item for item in available if self._isOnePiece(item)]
+        if len(one_pieces) > 1:
+            return CheckResult(False, "В образе может быть только одно платье или комбинезон")
+        tops = [
+            item for item in available
+            if item.part == ItemPart.TOP and not self._isOuterwear(item)
+            and not self._isOnePiece(item)
+        ]
+        bottoms = [item for item in available if item.part == ItemPart.BOTTOM]
+        shoes = [item for item in available if item.part == ItemPart.SHOES]
+        outerwear = [item for item in available if self._isOuterwear(item)]
+        if len(tops) > 1:
+            return CheckResult(False, "В образе может быть только один верх")
+        if len(bottoms) > 1:
+            return CheckResult(False, "В образе может быть только один низ")
+        if len(shoes) > 1:
+            return CheckResult(False, "В образе может быть только одна пара обуви")
+        if len(outerwear) > 1:
+            return CheckResult(False, "В образе может быть только одна вещь верхней одежды")
+        accessory_categories = [
+            accessory_category_for_type(item.type)
+            for item in available if item.part == ItemPart.ACCESSORY
+        ]
+        if len(accessory_categories) != len(set(accessory_categories)):
+            return CheckResult(
+                False, "Нельзя сочетать два аксессуара одного типа "
+                "(например, две сумки, два шарфа или две шапки)"
+            )
         if one_pieces:
             core = [item for item in available if not self._isOnePiece(item)]
-            if any(item.part in (ItemPart.TOP, ItemPart.BOTTOM) for item in core):
+            if any(
+                item.part in (ItemPart.TOP, ItemPart.BOTTOM) and not self._isOuterwear(item)
+                for item in core
+            ):
                 return CheckResult(False, "Платье или комбинезон нельзя сочетать с верхом или низом")
         else:
-            tops = [item for item in available if item.part == ItemPart.TOP]
+            tops = [
+                item for item in available
+                if item.part == ItemPart.TOP and not self._isOuterwear(item)
+            ]
             bottoms = [item for item in available if item.part == ItemPart.BOTTOM]
             if not tops or not bottoms:
-                return CheckResult(False, "Для комплекта нужны верх и низ или платье")
-        if len(available) == 1 and self._isOnePiece(available[0]):
-            return CheckResult(True, "")
+                return CheckResult(False, "Для образа нужны верх и низ или платье")
+        if not shoes:
+            return CheckResult(False, "Для полностью одетого образа нужна обувь")
         colors = [self._canonicalColor(item.color) for item in available]
         for index, first in enumerate(colors):
             for second in colors[index + 1:]:
@@ -86,6 +121,10 @@ class CompatibilityRule:
                 score += 4
             elif item.part == ItemPart.ACCESSORY:
                 score += 1
+            if self._isOuterwear(item) and self._shouldSuggestOuterwear(weather):
+                score += 5
+            if self._isScarf(item) and self._shouldSuggestScarf(weather):
+                score += 3
         conditions = weather.conditions.casefold()
         garments = " ".join(
             f"{item.type} {item.material} {item.dressCode}".casefold() for item in items
@@ -120,20 +159,41 @@ class CompatibilityRule:
             and (not item.seasons or season in item.seasons)
         ]
         tops = [item for item in candidates if item.part == ItemPart.TOP]
+        outerwear = [item for item in candidates if self._isOuterwear(item)][:3]
         bottoms = [item for item in candidates if item.part == ItemPart.BOTTOM]
         dresses = [item for item in candidates if self._isOnePiece(item)]
-        tops = [item for item in tops if not self._isOnePiece(item)]
+        tops = [
+            item for item in tops
+            if not self._isOnePiece(item) and not self._isOuterwear(item)
+        ]
         bottoms = [item for item in bottoms if not self._isOnePiece(item)]
         shoes = [item for item in candidates if item.part == ItemPart.SHOES][:3]
-        accessories = [item for item in candidates if item.part == ItemPart.ACCESSORY][:3]
+        accessory_groups: dict[str, list[Item]] = {}
+        for item in candidates:
+            if item.part != ItemPart.ACCESSORY:
+                continue
+            if self._isScarf(item) and not self._shouldSuggestScarf(weather):
+                continue
+            category = accessory_category_for_type(item.type)
+            if category not in accessory_groups and len(accessory_groups) == 3:
+                continue
+            accessory_groups.setdefault(category, []).append(item)
+        accessory_choices = [
+            [None, *group[:3]] for group in accessory_groups.values()
+        ]
+        outerwear = outerwear if self._shouldSuggestOuterwear(weather) else []
         combinations: list[tuple[Item, ...]] = []
         core_combinations = [(dress,) for dress in dresses]
         core_combinations.extend(product(tops, bottoms))
         for core in core_combinations:
-            for shoe in [None, *shoes]:
-                for accessory in [None, *accessories]:
-                    extras = tuple(item for item in (shoe, accessory) if item is not None)
-                    combinations.append((*core, *extras))
+            for shoe in shoes:
+                for layer in [None, *outerwear]:
+                    for accessory_selection in self._accessorySelections(accessory_choices):
+                        extras = tuple(
+                            item for item in (shoe, layer, *accessory_selection)
+                            if item is not None
+                        )
+                        combinations.append((*core, *extras))
         scored = [
             (
                 self.match(list(items_set), weather, occasion)
@@ -184,6 +244,36 @@ class CompatibilityRule:
         return item.part == ItemPart.ONE_PIECE or item.type.casefold() in cls._dresses
 
     @staticmethod
+    def _isOuterwear(item: Item) -> bool:
+        return (
+            item.part == ItemPart.OUTERWEAR
+            or expected_part_for_type(item.type) == ItemPart.OUTERWEAR
+        )
+
+    @classmethod
+    def _isScarf(cls, item: Item) -> bool:
+        normalized = item.type.casefold()
+        return any(marker in normalized for marker in cls._scarves)
+
+    @staticmethod
+    def _accessorySelections(choices: list[list[Item | None]]) -> list[tuple[Item | None, ...]]:
+        return list(product(*choices)) if choices else [()]
+
+    @staticmethod
+    def _shouldSuggestOuterwear(weather: WeatherData) -> bool:
+        conditions = weather.conditions.casefold()
+        return weather.temperature <= 15 or any(
+            marker in conditions for marker in ("дожд", "лив", "rain", "drizzle", "снег", "snow")
+        )
+
+    @staticmethod
+    def _shouldSuggestScarf(weather: WeatherData) -> bool:
+        conditions = weather.conditions.casefold()
+        return weather.temperature <= 8 or any(
+            marker in conditions for marker in ("снег", "snow", "мороз", "freez")
+        )
+
+    @staticmethod
     def _seasonFor(day: date) -> Season:
         if day.month in (12, 1, 2):
             return Season.WINTER
@@ -228,10 +318,12 @@ class OutfitController:
             else date.today()
         )
         filter = OutfitFilter(selected_date, place)
+        weather = self.weatherService.getForecast(filter.place, filter.date)
         cached = self.outfitsRepository.findByDate(userId, filter.date, filter.place)
-        if cached and self._isCurrent(cached, self.itemsRepository.findAvailableByUser(userId)):
+        available = self.itemsRepository.findAvailableByUser(userId)
+        if cached and self._isCurrent(cached, available, weather):
             return cached[:self.rule.maxVariants]
-        return self._generate(userId, filter, useCache=True)
+        return self._generate(userId, filter, useCache=True, forecast=weather)
 
     def getTodayOutfit(self, userId: int) -> Outfit:
         outfits = self.getTodayOutfits(userId)
@@ -289,9 +381,10 @@ class OutfitController:
             raise BadCombinationError(result.reason or Messages.BAD_COMBINATION)
 
     def _generate(
-        self, userId: int, filter: OutfitFilter, useCache: bool = False
+        self, userId: int, filter: OutfitFilter, useCache: bool = False,
+        forecast: WeatherData | None = None,
     ) -> list[Outfit]:
-        weather = self.weatherService.getForecast(filter.place, filter.date)
+        weather = forecast or self.weatherService.getForecast(filter.place, filter.date)
         if filter.temperature is not None:
             weather = WeatherData(
                 place=weather.place, date=weather.date,
@@ -316,7 +409,9 @@ class OutfitController:
         self.outfitsRepository.save(variants)
         return variants
 
-    def _isCurrent(self, outfits: list[Outfit], available: list[Item]) -> bool:
+    def _isCurrent(
+        self, outfits: list[Outfit], available: list[Item], weather: WeatherData
+    ) -> bool:
         indexed = {item.id: item for item in available}
         for outfit in outfits:
             if not outfit.items:
@@ -325,5 +420,33 @@ class OutfitController:
                 return False
             current_items = [indexed[item.id] for item in outfit.items]
             if not self.rule.check(current_items).compatible:
+                return False
+            if not self.rule._shouldSuggestOuterwear(weather) and any(
+                self.rule._isOuterwear(item) for item in current_items
+            ):
+                return False
+            if not self.rule._shouldSuggestScarf(weather) and any(
+                self.rule._isScarf(item) for item in current_items
+            ):
+                return False
+        season = self.rule._seasonFor(weather.date)
+        weather_items = [
+            item for item in available
+            if item.minTemperature <= weather.temperature <= item.maxTemperature
+            and (not item.seasons or season in item.seasons)
+        ]
+        if self.rule._shouldSuggestOuterwear(weather):
+            available_outerwear = any(self.rule._isOuterwear(item) for item in weather_items)
+            suggested_outerwear = any(
+                self.rule._isOuterwear(item) for outfit in outfits for item in outfit.items
+            )
+            if available_outerwear and not suggested_outerwear:
+                return False
+        if self.rule._shouldSuggestScarf(weather):
+            available_scarf = any(self.rule._isScarf(item) for item in weather_items)
+            suggested_scarf = any(
+                self.rule._isScarf(item) for outfit in outfits for item in outfit.items
+            )
+            if available_scarf and not suggested_scarf:
                 return False
         return True

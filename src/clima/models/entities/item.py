@@ -8,10 +8,14 @@ MIN_ITEM_TEMPERATURE = -50
 MAX_ITEM_TEMPERATURE = 50
 TOP_TYPE_MARKERS = (
     "футболк", "поло", "лонгслив", "майк", "топ", "рубаш", "блуз", "туник", "корсет",
-    "боди", "свитер", "худи", "кардиган", "куртк", "пальто", "плащ", "пиджак",
-    "жилет", "свитшот", "толстовк", "жакет", "блейзер", "джемпер", "пуловер", "парка",
-    "ветровк", "анорак", "пухов", "тренч", "дубл", "шуб", "водолазк", "бомбер",
-    "футбол", "blouse", "sweater", "hoodie", "jacket", "coat",
+    "боди", "свитер", "худи", "кардиган", "жилет", "свитшот", "толстовк",
+    "джемпер", "пуловер", "водолазк", "футбол", "blouse", "sweater", "hoodie",
+)
+OUTERWEAR_TYPE_MARKERS = (
+    "куртк", "пальто", "плащ", "пиджак", "жакет", "блейзер", "парка", "ветровк",
+    "анорак", "пухов", "тренч", "дубл", "шуб", "бомбер", "косух", "дождевик",
+    "пончо", "накидк", "дафлкот", "jacket", "coat", "anorak", "parka", "trench",
+    "raincoat", "poncho", "cape", "blazer",
 )
 BOTTOM_TYPE_MARKERS = (
     "джинс", "брюк", "штан", "юбк", "шорт", "бермуд", "леггинс", "лосин", "капри",
@@ -28,7 +32,10 @@ NO_SILHOUETTE_TYPE_MARKERS = (
 )
 ACCESSORY_TYPE_MARKERS = (
     "шарф", "шапк", "перчат", "носк", "колгот", "рем", "сумк", "рюкзак",
-    "клатч", "кошелек", "кошелёк", "scarf", "bag",
+    "клатч", "кошелек", "кошелёк", "шляп", "кепк", "бейсболк", "берет", "панам",
+    "варежк", "платок", "снуд", "палантин", "hat", "cap", "beanie", "glove",
+    "mitten", "scarf", "bag", "backpack", "purse", "wallet", "belt", "sock",
+    "tights",
 )
 ONE_PIECE_TYPE_MARKERS = ("плать", "сарафан", "комбинезон", "dress", "jumpsuit")
 SILHOUETTES_BY_CATEGORY = {
@@ -76,13 +83,30 @@ def expected_part_for_type(item_type: str) -> ItemPart | None:
         return ItemPart.ACCESSORY
     if any(marker in normalized for marker in ONE_PIECE_TYPE_MARKERS):
         return ItemPart.ONE_PIECE
+    if any(marker in normalized for marker in OUTERWEAR_TYPE_MARKERS):
+        return ItemPart.OUTERWEAR
     is_top = any(marker in normalized for marker in TOP_TYPE_MARKERS)
     is_bottom = any(marker in normalized for marker in BOTTOM_TYPE_MARKERS)
-    if is_top and is_bottom and "куртк" in normalized and "джинс" in normalized:
-        return ItemPart.TOP
     if is_top == is_bottom:
         return None
     return ItemPart.TOP if is_top else ItemPart.BOTTOM
+
+
+def accessory_category_for_type(item_type: str) -> str:
+    normalized = item_type.casefold().replace("ё", "е")
+    categories = {
+        "bag": ("сумк", "рюкзак", "клатч", "кошелек", "bag", "backpack", "purse", "wallet"),
+        "scarf": ("шарф", "платок", "снуд", "палантин", "scarf"),
+        "headwear": ("шапк", "шляп", "кепк", "бейсболк", "берет", "панам", "hat", "cap", "beanie"),
+        "gloves": ("перчат", "варежк", "glove", "mitten"),
+        "socks": ("носк", "sock"),
+        "tights": ("колгот", "tights"),
+        "belt": ("рем", "belt"),
+    }
+    for category, markers in categories.items():
+        if any(marker in normalized for marker in markers):
+            return category
+    return f"other:{normalized}"
 
 
 def silhouette_category_for_type(item_type: str) -> str:
@@ -193,7 +217,8 @@ class Item(OwnedEntity):
             for marker in BOTTOM_TYPE_MARKERS
         ):
             raise ValidationError("Тип вещи не может одновременно относиться к верху и низу")
-        if expected_part is not None and expected_part != self.part:
+        legacy_outerwear = expected_part == ItemPart.OUTERWEAR and self.part == ItemPart.TOP
+        if expected_part is not None and expected_part != self.part and not legacy_outerwear:
             raise ValidationError("Выбранная часть образа не соответствует типу вещи")
         if self.minTemperature > self.maxTemperature:
             raise ValidationError("Минимальная температура выше максимальной")

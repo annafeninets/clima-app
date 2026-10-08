@@ -1,5 +1,5 @@
 import { request, photoUrl } from "../core/api.js";
-import { state, PARTS } from "../core/state.js";
+import { state, PARTS } from "../core/state.js?v=20261008-02";
 import { escapeHTML, humanDate, icon, itemCountLabel, showToast, today } from "../ui/helpers.js";
 import { emptyState, heading, shell } from "../ui/layout.js";
 
@@ -77,7 +77,13 @@ export async function renderHistory() {
 
 export async function submitPlan(event, rerender) {
   event.preventDefault();
-  const data = new FormData(event.currentTarget);
+  const form = event.currentTarget;
+  if (form.dataset.submitting === "true") return;
+  form.dataset.submitting = "true";
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  button.textContent = "Подбираем…";
+  const data = new FormData(form);
   const params = new URLSearchParams({
     place: String(data.get("place")).trim(), date: String(data.get("date")),
     occasion: String(data.get("occasion"))
@@ -88,7 +94,15 @@ export async function submitPlan(event, rerender) {
     state.outfits = await request(`/outfits/plan?${params.toString()}`);
     showToast(state.outfits.length ? `Подобрали образов: ${state.outfits.length}` : "На эту дату подходящих сочетаний пока нет");
     await rerender();
-  } catch (error) { showToast(error.message, true); }
+  } catch (error) {
+    showToast(error.message, true);
+  } finally {
+    if (form.isConnected) {
+      delete form.dataset.submitting;
+      button.disabled = false;
+      button.innerHTML = `${icon("sparkle")}Подобрать`;
+    }
+  }
 }
 
 export async function composeOutfit() {

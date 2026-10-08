@@ -11,6 +11,7 @@ export const PARTS = {
   TOP: "Верх",
   BOTTOM: "Низ",
   SHOES: "Обувь",
+  OUTERWEAR: "Верхняя одежда",
   ACCESSORY: "Аксессуары",
   ONE_PIECE: "Платье / комбинезон"
 };

@@ -1,5 +1,5 @@
 import { request, photoUrl } from "../core/api.js";
-import { state, PARTS, SEASONS, SEASON_LABELS } from "../core/state.js";
+import { state, PARTS, SEASONS, SEASON_LABELS } from "../core/state.js?v=20261008-02";
 import { escapeHTML, fileAsDataUrl, icon, itemCountLabel, showToast } from "../ui/helpers.js";
 import { emptyState, heading, shell } from "../ui/layout.js";
 
@@ -8,9 +8,10 @@ const ITEM_SUGGESTIONS = {
     "Футболка", "Поло", "Лонгслив", "Майка", "Топ", "Рубашка", "Блузка", "Туника",
     "Корсет", "Боди", "Свитер", "Джемпер", "Пуловер", "Водолазка", "Кардиган",
     "Свитшот", "Толстовка", "Худи", "Жилет", "Пиджак", "Блейзер", "Куртка",
-    "Кожаная куртка", "Джинсовая куртка", "Бомбер", "Ветровка", "Анорак", "Парка",
-    "Пуховик", "Пальто", "Тренч", "Плащ", "Дублёнка", "Шуба", "Платье", "Сарафан",
-    "Юбка", "Брюки", "Классические брюки", "Джинсы", "Шорты", "Бермуды", "Капри",
+    "Кожаная куртка", "Косуха", "Джинсовая куртка", "Бомбер", "Ветровка", "Анорак",
+    "Парка", "Пуховик", "Пальто", "Дафлкот", "Тренч", "Плащ", "Дождевик", "Пончо",
+    "Накидка", "Дублёнка", "Шуба", "Платье", "Сарафан", "Юбка", "Брюки",
+    "Классические брюки", "Джинсы", "Шорты", "Бермуды", "Капри",
     "Леггинсы", "Спортивные брюки", "Комбинезон", "Кроссовки", "Кеды", "Ботинки",
     "Ботильоны", "Сапоги", "Туфли", "Лоферы", "Мокасины", "Балетки", "Сандалии",
     "Сандалии на каблуке", "Босоножки", "Шлёпанцы", "Мюли", "Угги", "Шарф", "Шапка",
@@ -70,10 +71,14 @@ const ITEM_TEXT_FIELDS = [
 
 const TOP_TYPE_MARKERS = [
   "футболк", "поло", "лонгслив", "майк", "топ", "рубаш", "блуз", "туник", "корсет",
-  "боди", "свитер", "худи", "кардиган", "куртк", "пальто", "плащ", "пиджак",
-  "жилет", "свитшот", "толстовк", "жакет", "блейзер", "джемпер", "пуловер", "парка",
-  "ветровк", "анорак", "пухов", "тренч", "дубл", "шуб", "водолазк", "бомбер",
-  "футбол", "blouse", "sweater", "hoodie", "jacket", "coat"
+  "боди", "свитер", "худи", "кардиган", "жилет", "свитшот", "толстовк", "джемпер",
+  "пуловер", "водолазк", "футбол", "blouse", "sweater", "hoodie"
+];
+const OUTERWEAR_TYPE_MARKERS = [
+  "куртк", "пальто", "плащ", "пиджак", "жакет", "блейзер", "парка", "ветровк",
+  "анорак", "пухов", "тренч", "дубл", "шуб", "бомбер", "косух", "дождевик",
+  "пончо", "накидк", "дафлкот", "jacket", "coat", "anorak", "parka", "trench",
+  "raincoat", "poncho", "cape", "blazer"
 ];
 const BOTTOM_TYPE_MARKERS = [
   "джинс", "брюк", "штан", "юбк", "шорт", "бермуд", "леггинс", "лосин", "капри",
@@ -152,7 +157,7 @@ function typeCategory(type) {
   if (["носк", "колгот", "перчат", "рем"].some((marker) => normalized.includes(marker))) return "noSilhouette";
   if (["шапк", "перчат", "носк", "колгот", "рем"].some((marker) => normalized.includes(marker))) return "accessory";
   if (["плать", "сарафан", "комбинезон"].some((marker) => normalized.includes(marker))) return "onePiece";
-  if (["куртк", "пальто", "плащ", "блейзер", "джинсовая куртка"].some((marker) => normalized.includes(marker))) return "upper";
+  if (OUTERWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "upper";
   if (BOTTOM_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "lower";
   if (TOP_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "upper";
   return "upper";
@@ -163,9 +168,9 @@ export function expectedPartForType(type) {
   if (FOOTWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "SHOES";
   if (["шарф", "шапк", "перчат", "носк", "колгот", "рем", "сумк", "рюкзак", "клатч", "кошелек", "кошелёк", "scarf", "bag"].some((marker) => normalized.includes(marker))) return "ACCESSORY";
   if (["плать", "сарафан", "комбинезон", "dress", "jumpsuit"].some((marker) => normalized.includes(marker))) return "ONE_PIECE";
+  if (OUTERWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "OUTERWEAR";
   const isTop = TOP_TYPE_MARKERS.some((marker) => normalized.includes(marker));
   const isBottom = BOTTOM_TYPE_MARKERS.some((marker) => normalized.includes(marker));
-  if (isTop && isBottom && normalized.includes("куртк") && normalized.includes("джинс")) return "TOP";
   if (isTop && isBottom) return "MIXED";
   if (isTop) return "TOP";
   if (isBottom) return "BOTTOM";
@@ -358,7 +363,7 @@ export function openItemForm(item = {}) {
     ${preview}
     ${textField("type")}
     ${textField("color")}
-    <div class="field"><label for="item-part">Часть образа</label><select id="item-part" name="part" required aria-describedby="item-part-error"><option value="" ${item.part ? "" : "selected"} disabled>Выберите часть образа</option>${Object.entries(PARTS).map(([value, label]) => `<option value="${value}" ${item.part === value ? "selected" : ""}>${label}</option>`).join("")}</select><small class="field-error" id="item-part-error" aria-live="polite"></small></div>
+    <div class="field"><label for="item-part">Часть образа</label><select id="item-part" name="part" required aria-describedby="item-part-error"><option value="" ${item.part ? "" : "selected"} disabled>Выберите часть образа</option>${Object.entries(PARTS).map(([value, label]) => `<option value="${value}" ${item.part === value ? "selected" : ""}>${label}</option>`).join("")}</select><small class="field-hint">Футболка или свитер — «Верх», куртка, пальто или анорак — «Верхняя одежда».</small><small class="field-error" id="item-part-error" aria-live="polite"></small></div>
     ${textField("dressCode")}
     <div class="field wide"><span class="field-label">Сезоны</span><div class="season-options">${SEASONS.map((season) => `<label class="season-option"><input type="checkbox" name="seasons" value="${season}" ${checkedSeasons.includes(season) ? "checked" : ""} /><span>${SEASON_LABELS[season]}</span></label>`).join("")}</div></div>
     <div class="field"><label for="min-temp">От, °C</label><input id="min-temp" name="minTemperature" type="number" min="-50" max="50" step="1" required value="${item.minTemperature ?? ""}" placeholder="−50…50" /><small class="field-hint">Допустимо от −50 до 50 °C</small></div>
