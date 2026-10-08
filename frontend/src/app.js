@@ -1,16 +1,16 @@
 import { ApiError, request } from "./core/api.js";
-import { state, clearSession, STORAGE_KEYS } from "./core/state.js?v=20261008-02";
-import { renderAuth, submitAuth, toggleAuthMode, logout } from "./features/auth.js?v=20261003-6";
+import { state, clearSession, STORAGE_KEYS } from "./core/state.js?v=20261008-03";
+import { renderAuth, submitAuth, toggleAuthMode, logout } from "./features/auth.js?v=20261008-01";
 import {
   composeOutfit, renderFavorites, renderHistory, renderHome, renderPlan, saveComposedOutfit, submitPlan
-} from "./features/outfits.js?v=20261008-04";
+} from "./features/outfits.js?v=20261008-05";
 import {
   changeLaundry, deleteItem, openItemForm, renderWardrobe
-} from "./features/wardrobe.js?v=20261008-01";
+} from "./features/wardrobe.js?v=20261008-02";
 import {
   connectPush, handleNotificationToggle, renderSettings, saveNotifications, saveProfile,
   validateProfileFieldInput
-} from "./features/settings.js?v=20261008-05";
+} from "./features/settings.js?v=20261008-06";
 import { showToast } from "./ui/helpers.js";
 import { loadingError, shell } from "./ui/layout.js";
 
@@ -37,6 +37,9 @@ async function render() {
     state.location = (await request("/profile/location"))?.location || "";
     if (["home", "wardrobe", "favorites"].includes(state.page)) {
       state.wardrobe = await request("/wardrobe");
+    }
+    if (["wardrobe", "settings"].includes(state.page)) {
+      state.wardrobeStatus = await request("/wardrobe/status");
     }
     if (state.page === "home") {
       state.homeError = "";
@@ -76,6 +79,22 @@ async function handleAction(element, event) {
   const action = element.dataset.action;
   try {
     if (action === "retry") return render();
+    if (action === "dismiss-wardrobe-hint") {
+      state.wardrobeHintMissing = [];
+      const url = new URL(window.location.href);
+      url.searchParams.delete("missing");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+      return render();
+    }
+    if (action === "add-missing-item") {
+      const partByCategory = {
+        top: "TOP", outerwear: "OUTERWEAR", bottom: "BOTTOM", shoes: "SHOES",
+        bag: "ACCESSORY", hat: "ACCESSORY", accessories: "ACCESSORY"
+      };
+      const part = partByCategory[element.dataset.category];
+      if (!part) throw new Error("Не удалось определить категорию вещи.");
+      return openItemForm({ part });
+    }
     if (action === "go-wardrobe") { state.page = "wardrobe"; return render(); }
     if (action === "go-plan") { state.page = "plan"; return render(); }
     if (action === "open-item") return openItemForm();
@@ -251,7 +270,15 @@ document.addEventListener("submit", async (event) => {
   else if (event.target.id === "compose-form") await saveComposedOutfit(event, render);
 });
 
-window.addEventListener("clima:item-saved", render);
+window.addEventListener("clima:item-saved", (event) => {
+  if (event.detail?.isNew && state.wardrobeHintMissing.length) {
+    state.wardrobeHintMissing = [];
+    const url = new URL(window.location.href);
+    url.searchParams.delete("missing");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+  render();
+});
 
 window.addEventListener("clima:unauthorized", () => {
   clearSession();

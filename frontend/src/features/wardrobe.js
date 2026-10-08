@@ -1,5 +1,5 @@
 import { request, photoUrl } from "../core/api.js";
-import { state, PARTS, SEASONS, SEASON_LABELS } from "../core/state.js?v=20261008-02";
+import { state, PARTS, SEASONS, SEASON_LABELS } from "../core/state.js?v=20261008-03";
 import { escapeHTML, fileAsDataUrl, icon, itemCountLabel, showToast } from "../ui/helpers.js";
 import { emptyState, heading, shell } from "../ui/layout.js";
 
@@ -68,6 +68,25 @@ const ITEM_TEXT_FIELDS = [
   ["material", "Материал", "Например, хлопок"],
   ["silhouette", "Силуэт", "Например, прямой"]
 ];
+
+const WARDROBE_HINT_LABELS = {
+  top: "верх",
+  outerwear: "верхнюю одежду",
+  bottom: "низ",
+  shoes: "обувь",
+  bag: "сумку",
+  hat: "головной убор",
+  accessories: "аксессуары"
+};
+const WARDROBE_HINT_TITLES = {
+  top: "Верх",
+  outerwear: "Верхняя одежда",
+  bottom: "Низ",
+  shoes: "Обувь",
+  bag: "Сумка",
+  hat: "Головной убор",
+  accessories: "Аксессуары"
+};
 
 const TOP_TYPE_MARKERS = [
   "футболк", "поло", "лонгслив", "майк", "топ", "рубаш", "блуз", "туник", "корсет",
@@ -336,7 +355,13 @@ export async function renderWardrobe() {
   });
   const cards = await Promise.all(filtered.map(itemCard));
   const action = `<button class="button secondary" data-action="compose-outfit">${icon("sparkle")}Собрать образ</button><button class="button" data-action="open-item">${icon("plus")}Добавить вещь</button>`;
+  const missing = [...new Set(state.wardrobeHintMissing || [])]
+    .filter((category) => state.wardrobeStatus?.missing?.includes(category));
+  const hintBanner = missing.length
+    ? `<aside class="wardrobe-hint" role="status"><button class="wardrobe-hint-close" type="button" data-action="dismiss-wardrobe-hint" aria-label="Закрыть">×</button><h2>Добавьте вещи в гардероб</h2><p>Чтобы получить образ на сегодня, добавьте: ${escapeHTML(missing.map((category) => WARDROBE_HINT_LABELS[category] || category).join(", "))}</p><div class="wardrobe-hint-actions">${missing.map((category) => `<button class="button secondary small" type="button" data-action="add-missing-item" data-category="${category}">Добавить: ${escapeHTML(WARDROBE_HINT_TITLES[category] || category)}</button>`).join("")}</div></aside>`
+    : "";
   return shell(`${heading("Мой гардероб", `${itemCountLabel(state.wardrobe.length)} в вашей коллекции. Каждая вещь — часть будущего образа.`, action)}
+    ${hintBanner}
     <div class="toolbar"><div class="search-field">${icon("search")}<input id="wardrobe-search" placeholder="Найти вещь..." value="${escapeHTML(state.search)}" /></div><div class="filter-pills">${[["ALL", "Все"], ...Object.entries(PARTS), ["CLEAN", "Чистые"], ["LAUNDRY", "В стирке"]].map(([value, label]) => `<button class="filter-pill ${state.filter === value ? "active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div></div>
     ${cards.length ? `<div class="wardrobe-grid">${cards.join("")}</div>` : emptyState(state.wardrobe.length ? "Ничего не найдено" : "Ваш гардероб ждёт первую вещь", state.wardrobe.length ? "Попробуйте изменить поиск или фильтр." : "Добавьте фото любимой вещи и укажите её характеристики — Clima позаботится об остальном.", state.wardrobe.length ? "" : "Добавить вещь", state.wardrobe.length ? "" : "open-item")}`);
 }
@@ -471,7 +496,11 @@ export function openItemForm(item = {}) {
     submitButton.disabled = true;
     submitButton.textContent = "Сохранение…";
     try {
-      if (await saveItem(event)) window.dispatchEvent(new Event("clima:item-saved"));
+      if (await saveItem(event)) {
+        window.dispatchEvent(new CustomEvent("clima:item-saved", {
+          detail: { isNew: !itemForm.dataset.id }
+        }));
+      }
     } catch (error) {
       showItemSaveError(itemForm, error);
     } finally {

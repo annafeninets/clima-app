@@ -38,6 +38,15 @@ export const state = {
   homeError: ""
 };
 
+const missingFromUrl = new URLSearchParams(window.location.search).get("missing");
+const wardrobeHintCategories = new Set([
+  "top", "outerwear", "bottom", "shoes", "bag", "hat", "accessories"
+]);
+state.wardrobeHintMissing = missingFromUrl
+  ? missingFromUrl.split(",").filter((category) => wardrobeHintCategories.has(category))
+  : [];
+if (state.wardrobeHintMissing.length) state.page = "wardrobe";
+
 export function clearSession() {
   state.token = "";
   state.login = "";

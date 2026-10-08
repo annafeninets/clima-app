@@ -1,6 +1,6 @@
 """Daily local-time notification scheduler."""
 
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta, timezone
 import logging
 from threading import Event, RLock, Thread
 from zoneinfo import ZoneInfo
@@ -33,6 +33,7 @@ class Scheduler:
         # Локальная копия страхует от дублей, если Redis недоступен; общий кеш — от дублей после
         # перезапуска и при нескольких экземплярах backend.
         self._delivered: dict[int, date] = {}
+        self._wardrobe_hint_delivered: dict[int, date] = {}
         self._thread: Thread | None = None
 
     def start(self, intervalSeconds: int = 20) -> None:
@@ -70,13 +71,32 @@ class Scheduler:
                     outfit = self.outfitController.getTodayOutfit(user.id)
                     self.notificationController.sendMorningOutfit(user.id, outfit)
                     self._markDelivered(user.id, local_date)
-                except NotEnoughItemsError:
+                except NotEnoughItemsError as error:
                     try:
-                        self.notificationController.sendHint(user.id)
+                        status = self.outfitController.getWardrobeStatus(user.id)
+                        if status["is_complete"]:
+                            logger.info(
+                                "Не отправляем подсказку пользователю %s: гардероб уже полон",
+                                user.id,
+                            )
+                            continue
+                        if self._isWardrobeHintDelivered(user.id, local_date):
+                            continue
+                        missing = status["missing"]
+                        self.notificationController.sendWardrobeHint(user.id, missing)
                     except AppError:
                         logger.exception("Не удалось отправить подсказку пользователю %s", user.id)
+                    except Exception:
+                        logger.exception("Ошибка подготовки подсказки пользователю %s", user.id)
                     else:
-                        self._markDelivered(user.id, local_date)
+                        self._markWardrobeHintDelivered(
+                            user.id, local_date, user.settings.timeZone, now
+                        )
+                        logger.info(
+                            "Отправлена подсказка о гардеробе пользователю %s; missing=%s",
+                            user.id,
+                            error.missing or missing,
+                        )
                 except AppError:
                     logger.exception("Не удалось отправить утренний аутфит пользователю %s", user.id)
 
@@ -92,6 +112,31 @@ class Scheduler:
     def _markDelivered(self, userId: int, day: date) -> None:
         self._delivered[userId] = day
         self.cache.set(self._deliveredKey(userId, day), "1", DELIVERED_TTL_SECONDS)
+
+    @staticmethod
+    def _wardrobeHintKey(userId: int, day: date) -> str:
+        return f"wardrobe_hint_sent:{userId}:{day.isoformat()}"
+
+    def _isWardrobeHintDelivered(self, userId: int, day: date) -> bool:
+        if self._wardrobe_hint_delivered.get(userId) == day:
+            return True
+        return self.cache.get(self._wardrobeHintKey(userId, day)) is not None
+
+    def _markWardrobeHintDelivered(
+        self, userId: int, day: date, timeZone: str, now: datetime
+    ) -> None:
+        self._wardrobe_hint_delivered[userId] = day
+        zone = ZoneInfo(timeZone)
+        local_now = now.astimezone(zone)
+        next_midnight = datetime.combine(day + timedelta(days=1), time.min, zone)
+        ttl = max(
+            1,
+            (
+                next_midnight.astimezone(timezone.utc)
+                - local_now.astimezone(timezone.utc)
+            ).total_seconds(),
+        )
+        self.cache.set(self._wardrobeHintKey(userId, day), "1", ttl)
 
     def _run(self, intervalSeconds: int) -> None:
         while not self._stop_event.is_set():

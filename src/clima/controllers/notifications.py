@@ -6,6 +6,23 @@ from clima.models.entities import Outfit, User
 from clima.models.value_objects import Messages, PushSubscription
 from clima.repositories.users import UsersRepository
 
+WARDROBE_LABELS = {
+    "top": "верх",
+    "outerwear": "верхняя одежда",
+    "bottom": "низ",
+    "shoes": "обувь",
+    "bag": "сумка",
+    "hat": "головной убор",
+    "accessories": "аксессуары",
+}
+
+
+def formatMissingText(missing: list[str]) -> str:
+    if not missing:
+        return "Добавьте вещи в гардероб"
+    labels = ", ".join(WARDROBE_LABELS.get(category, category) for category in missing)
+    return f"Не хватает: {labels}. Добавьте, чтобы получить образ"
+
 
 class NotificationController:
     def __init__(self, usersRepository: UsersRepository, pushService: PushService):
@@ -54,7 +71,22 @@ class NotificationController:
         self.pushService.send(
             user.settings.pushSubscription,
             "Утренний аутфит",
-            "Посмотрите образ на день",
+            "Посмотрите образ на сегодня",
+            "/outfits/today",
+            "daily-outfit",
+        )
+
+    def sendWardrobeHint(self, userId: int, missing: list[str]) -> None:
+        user = self._user(userId)
+        if not user.settings.notificationsEnabled or user.settings.pushSubscription is None:
+            return
+        categories = ",".join(missing)
+        self.pushService.send(
+            user.settings.pushSubscription,
+            "Добавьте вещи в гардероб",
+            formatMissingText(missing),
+            f"/wardrobe?missing={categories}",
+            "wardrobe-hint",
         )
 
     def sendHint(self, userId: int) -> None:
@@ -63,7 +95,9 @@ class NotificationController:
             self.pushService.send(
                 user.settings.pushSubscription,
                 "Утренний аутфит",
-                "Добавьте вещи в гардероб, чтобы получить образ на день.",
+                "Добавьте город в настройках, чтобы получить образ на день.",
+                "/settings",
+                "daily-outfit",
             )
 
     def _user(self, userId: int) -> User:

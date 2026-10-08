@@ -75,7 +75,7 @@ class BackendTests(unittest.TestCase):
             query=query or {},
         ))
 
-    def add_item(self, item_type, color, part):
+    def add_item(self, item_type, color, part, silhouette="straight"):
         photo = base64.b64encode(self.png_bytes()).decode()
         draft = self.request("POST", "/wardrobe/items", {"photo": photo}, self.token)
         self.assertTrue(draft.success, draft.message)
@@ -90,7 +90,7 @@ class BackendTests(unittest.TestCase):
             "maxTemperature": 40,
             "dressCode": "casual",
             "style": "classic",
-            "silhouette": "straight",
+            "silhouette": silhouette,
             "material": "cotton",
         }, self.token)
 
@@ -608,6 +608,65 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(settings.data.notificationTime.isoformat(timespec="minutes"), "07:30")
         self.assertEqual(settings.data.timeZone, "Europe/Moscow")
 
+    def test_wardrobe_status_counts_available_categories(self):
+        initial = self.request("GET", "/wardrobe/status", token=self.token)
+        self.assertFalse(initial.data["is_complete"])
+        self.assertEqual(initial.data["missing"], ["top", "bottom", "shoes"])
+
+        self.add_item("Футболка", "белый", "TOP")
+        self.add_item("Джинсы", "синий", "BOTTOM")
+        self.add_item("Кроссовки", "белый", "SHOES")
+        bag = self.add_item("Сумка", "чёрный", "ACCESSORY", "Тоут")
+        hat = self.add_item("Шапка", "чёрный", "ACCESSORY", "Бини")
+        self.assertTrue(bag.success, bag.message)
+        self.assertTrue(hat.success, hat.message)
+        status = self.request("GET", "/wardrobe/status", token=self.token)
+        self.assertTrue(status.data["is_complete"])
+        self.assertEqual(status.data["missing"], [])
+        self.assertEqual(status.data["have"]["top"], 1)
+        self.assertEqual(status.data["have"]["bottom"], 1)
+        self.assertEqual(status.data["have"]["shoes"], 1)
+        self.assertEqual(status.data["have"]["bag"], 1)
+        self.assertEqual(status.data["have"]["hat"], 1)
+
+    def test_wardrobe_status_accepts_dress_with_shoes(self):
+        dress = self.add_item("Платье", "чёрный", "ONE_PIECE", "Прямой")
+        shoes = self.add_item("Туфли", "чёрный", "SHOES")
+        self.assertTrue(dress.success, dress.message)
+        self.assertTrue(shoes.success, shoes.message)
+
+        status = self.request("GET", "/wardrobe/status", token=self.token)
+
+        self.assertTrue(status.data["is_complete"])
+        self.assertEqual(status.data["have"]["one_piece"], 1)
+        self.assertEqual(status.data["missing"], [])
+
+    def test_outfit_shortage_returns_machine_readable_categories(self):
+        response = self.request(
+            "GET",
+            "/outfits/plan",
+            token=self.token,
+            query={
+                "date": date.today().isoformat(), "place": "Moscow", "occasion": "everyday",
+            },
+        )
+        self.assertEqual(response.status, 409)
+        self.assertEqual(response.data["error"], "insufficient_wardrobe")
+        self.assertEqual(response.data["missing"], ["top", "bottom", "shoes"])
+        self.assertEqual(response.data["have"]["shoes"], 0)
+
+    def test_today_outfit_shortage_reports_missing_shoes(self):
+        self.add_item("Футболка", "белый", "TOP")
+        self.add_item("Джинсы", "синий", "BOTTOM")
+
+        response = self.request(
+            "GET", "/outfits/today", token=self.token, query={"location": "Moscow"}
+        )
+
+        self.assertEqual(response.status, 409)
+        self.assertEqual(response.data["error"], "insufficient_wardrobe")
+        self.assertEqual(response.data["missing"], ["shoes"])
+        self.assertEqual(response.data["have"]["top"], 1)
     def test_push_subscription_and_preferences_are_saved_without_exposing_keys(self):
         saved = self.request("POST", "/push/subscribe", {
             "subscription": {

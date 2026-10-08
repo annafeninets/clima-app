@@ -1,4 +1,4 @@
-import { state } from "./state.js?v=20261008-02";
+import { state } from "./state.js?v=20261008-03";
 
 export async function request(path, options = {}) {
   const headers = new Headers(options.headers || {});

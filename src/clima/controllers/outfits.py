@@ -323,16 +323,27 @@ class OutfitController:
         available = self.itemsRepository.findAvailableByUser(userId)
         if cached and self._isCurrent(cached, available, weather):
             return cached[:self.rule.maxVariants]
-        return self._generate(userId, filter, useCache=True, forecast=weather)
+        outfits = self._generate(userId, filter, useCache=True, forecast=weather)
+        if not outfits:
+            self._raiseIfWardrobeIncomplete(userId)
+        return outfits
 
     def getTodayOutfit(self, userId: int) -> Outfit:
         outfits = self.getTodayOutfits(userId)
         if not outfits:
-            raise NotEnoughItemsError(Messages.NOT_ENOUGH_ITEMS)
+            status = self.getWardrobeStatus(userId)
+            raise NotEnoughItemsError(
+                Messages.NOT_ENOUGH_ITEMS,
+                status["missing"] if not status["is_complete"] else None,
+                status["have"] if not status["is_complete"] else None,
+            )
         return outfits[0]
 
     def planOutfit(self, userId: int, filter: OutfitFilter) -> list[Outfit]:
-        return self._generate(userId, filter)
+        outfits = self._generate(userId, filter)
+        if not outfits:
+            self._raiseIfWardrobeIncomplete(userId)
+        return outfits
 
     def selectOutfit(self, userId: int, outfitId: int) -> Outfit:
         outfit = self.getOutfit(userId, outfitId)
@@ -375,6 +386,52 @@ class OutfitController:
     def getWardrobe(self, userId: int) -> list[Item]:
         return self.itemsRepository.findByUser(userId)
 
+    def getWardrobeStatus(self, userId: int) -> dict:
+        have = {
+            "top": 0,
+            "outerwear": 0,
+            "bottom": 0,
+            "shoes": 0,
+            "bag": 0,
+            "hat": 0,
+            "accessories": 0,
+            "one_piece": 0,
+        }
+        for item in self.itemsRepository.findAvailableByUser(userId):
+            if self.rule._isOnePiece(item):
+                have["one_piece"] += 1
+            elif self.rule._isOuterwear(item):
+                have["outerwear"] += 1
+            elif item.part == ItemPart.TOP:
+                have["top"] += 1
+            elif item.part == ItemPart.BOTTOM:
+                have["bottom"] += 1
+            elif item.part == ItemPart.SHOES:
+                have["shoes"] += 1
+            elif item.part == ItemPart.ACCESSORY:
+                category = accessory_category_for_type(item.type)
+                if category == "bag":
+                    have["bag"] += 1
+                elif category == "headwear":
+                    have["hat"] += 1
+                else:
+                    have["accessories"] += 1
+        missing = []
+        if not (have["top"] or have["one_piece"]):
+            missing.append("top")
+        if not (have["bottom"] or have["one_piece"]):
+            missing.append("bottom")
+        if not have["shoes"]:
+            missing.append("shoes")
+        return {"have": have, "missing": missing, "is_complete": not missing}
+
+    def _raiseIfWardrobeIncomplete(self, userId: int) -> None:
+        status = self.getWardrobeStatus(userId)
+        if not status["is_complete"]:
+            raise NotEnoughItemsError(
+                Messages.NOT_ENOUGH_ITEMS, status["missing"], status["have"]
+            )
+
     def validateReplacement(self, items: list[Item]) -> None:
         result = self.rule.check(items)
         if not result.compatible:
@@ -392,6 +449,7 @@ class OutfitController:
             )
         items = self.itemsRepository.findAvailableByUser(userId)
         if not items:
+            self._raiseIfWardrobeIncomplete(userId)
             raise NotEnoughItemsError(Messages.NOT_ENOUGH_ITEMS)
         user = self.usersRepository.findById(userId)
         variants = self.rule.generateVariants(

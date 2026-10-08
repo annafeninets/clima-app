@@ -34,6 +34,16 @@ class NotEnoughItemsError(AppError):
     status_code = 409
     code = "not_enough_items"
 
+    def __init__(
+        self, message: str, missing: list[str] | None = None,
+        have: dict[str, int] | None = None,
+    ):
+        super().__init__(message)
+        self.missing = missing
+        self.have = have
+        if missing is not None:
+            self.code = "insufficient_wardrobe"
+
 
 class BadCombinationError(AppError):
     status_code = 409

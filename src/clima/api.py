@@ -7,7 +7,7 @@ import json
 import logging
 import re
 
-from clima.errors import AppError, NotFoundError
+from clima.errors import AppError, NotEnoughItemsError, NotFoundError
 from clima.handlers.callback import CallbackHandler
 from clima.handlers.command import CommandHandler
 from clima.handlers.schedule import ScheduleHandler
@@ -36,6 +36,7 @@ class ClimaApi:
         (r"/push/subscriptions", "DELETE", "settingsHandler"),
         (r"/account", "DELETE", "settingsHandler"),
         (r"/wardrobe", "GET", "callbackHandler"),
+        (r"/wardrobe/status", "GET", "callbackHandler"),
         (r"/wardrobe/items", "POST", "uploadHandler"),
         (r"/wardrobe/items/draft", "PUT", "uploadHandler"),
         (r"/wardrobe/items/\d+/photo", "GET|PUT", "callbackHandler"),
@@ -77,6 +78,18 @@ class ClimaApi:
                     return getattr(self, handler_name).handle(request)
             raise NotFoundError("Маршрут не найден")
         except AppError as error:
+            if isinstance(error, NotEnoughItemsError) and error.missing is not None:
+                return Response(
+                    False,
+                    error.message,
+                    {
+                        "code": error.code,
+                        "error": error.code,
+                        "missing": error.missing,
+                        "have": error.have,
+                    },
+                    error.status_code,
+                )
             return Response.error(error.message, error.status_code, error.code)
         except Exception:
             logger.exception("Unhandled backend error for %s %s", request.method, request.path)

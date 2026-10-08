@@ -1,11 +1,11 @@
 import { request } from "../core/api.js";
-import { state, STORAGE_KEYS } from "../core/state.js?v=20261008-02";
+import { state, STORAGE_KEYS } from "../core/state.js?v=20261008-03";
 import { escapeHTML, showToast } from "../ui/helpers.js";
 import { heading, shell } from "../ui/layout.js";
 import {
   getCurrentSubscription, isIOSWithoutPWA, isPushSupported, requestNotificationPermission,
   sendSubscriptionToServer, subscribeToPush, unsubscribeFromPush
-} from "./push.js?v=20261008-01";
+} from "./push.js?v=20261008-02";
 
 const FALLBACK_TIME_ZONES = [
   "Europe/Moscow", "Europe/Kaliningrad", "Europe/Samara", "Asia/Yekaterinburg",
@@ -41,6 +41,17 @@ function notificationStatusMarkup() {
     return `<div class="push-status info" role="status">Подключение уведомлений пока недоступно.</div>`;
   }
   return `<div class="push-status info" id="push-status" role="status" aria-live="polite"></div>`;
+}
+
+function wardrobeStatusMarkup(status) {
+  if (status?.is_complete) return "";
+  const labels = {
+    top: "верх", outerwear: "верхнюю одежду", bottom: "низ",
+    shoes: "обувь", bag: "сумку", hat: "головной убор", accessories: "аксессуары"
+  };
+  const missing = (status?.missing || []).map((category) => labels[category] || category);
+  if (!missing.length) return "";
+  return `<div class="wardrobe-status-warning" role="status">Чтобы получать образы, добавьте: ${escapeHTML(missing.join(", "))}</div>`;
 }
 
 const PROFILE_SUGGESTIONS = {
@@ -89,7 +100,7 @@ export async function renderSettings() {
         ? detectedTimeZone
         : state.settings.timeZone || detectedTimeZone;
     const permission = isPushSupported() ? Notification.permission : "unsupported";
-    panel = `<h2>Утренний аутфит</h2><p class="page-subtitle">Ежедневное напоминание посмотреть образ на день</p><form id="notification-form"><label class="notification-switch-row" for="morning-notification-toggle"><span><strong>Ежедневное уведомление</strong><span class="field-hint">Одно напоминание в выбранное время</span></span><input id="morning-notification-toggle" class="switch" type="checkbox" name="enabled" role="switch" aria-checked="${state.settings.notificationsEnabled}" ${state.settings.notificationsEnabled ? "checked" : ""} /></label>${notificationStatusMarkup()}<div class="form-grid notification-fields"><div class="field"><label for="notificationTime">Время</label><input id="notificationTime" type="time" name="time" value="${escapeHTML(String(state.settings.notificationTime || "07:00").slice(0, 5))}" /></div><div class="field"><label for="timeZone">Часовой пояс</label><select id="timeZone" name="timeZone">${timeZoneOptions(selectedTimeZone)}</select></div></div><button class="button notification-save" type="submit">Сохранить настройки</button></form>${permission === "default" && isPushSupported() && state.publicVapidKey && !isIOSWithoutPWA() ? `<button class="button notification-connect" data-action="subscribe-push" type="button">Подключить push-уведомления</button>` : ""}`;
+    panel = `<h2>Утренний аутфит</h2><p class="page-subtitle">Ежедневное напоминание посмотреть образ на день</p><form id="notification-form"><label class="notification-switch-row" for="morning-notification-toggle"><span><strong>Ежедневное уведомление</strong><span class="field-hint">Одно напоминание в выбранное время</span></span><input id="morning-notification-toggle" class="switch" type="checkbox" name="enabled" role="switch" aria-checked="${state.settings.notificationsEnabled}" ${state.settings.notificationsEnabled ? "checked" : ""} /></label>${notificationStatusMarkup()}${wardrobeStatusMarkup(state.wardrobeStatus)}<div class="form-grid notification-fields"><div class="field"><label for="notificationTime">Время</label><input id="notificationTime" type="time" name="time" value="${escapeHTML(String(state.settings.notificationTime || "07:00").slice(0, 5))}" /></div><div class="field"><label for="timeZone">Часовой пояс</label><select id="timeZone" name="timeZone">${timeZoneOptions(selectedTimeZone)}</select></div></div><button class="button notification-save" type="submit">Сохранить настройки</button></form>${permission === "default" && isPushSupported() && state.publicVapidKey && !isIOSWithoutPWA() ? `<button class="button notification-connect" data-action="subscribe-push" type="button">Подключить push-уведомления</button>` : ""}`;
   } else if (state.settingsTab === "appearance") {
     panel = `<h2>Внешний вид</h2><p class="page-subtitle">Выберите комфортную тему интерфейса.</p><div class="filter-pills"><button class="filter-pill ${state.settings.theme === "LIGHT" ? "active" : ""}" data-theme-set="LIGHT">Светлая</button><button class="filter-pill ${state.settings.theme === "DARK" ? "active" : ""}" data-theme-set="DARK">Тёмная</button></div>`;
   } else {

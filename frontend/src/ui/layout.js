@@ -1,4 +1,4 @@
-import { state } from "../core/state.js?v=20261008-02";
+import { state } from "../core/state.js?v=20261008-03";
 import { escapeHTML, icon } from "./helpers.js";
 
 export const ROUTE_NAMES = {

@@ -31,6 +31,8 @@ class CallbackHandler(Handler):
             return self._handleAction(action, args)
         request, userId = args
         path, method, body = request.path, request.method, request.body
+        if path == "/wardrobe/status" and method == "GET":
+            return Response.ok(self.outfitController.getWardrobeStatus(userId))
         if path == "/wardrobe" and method == "GET":
             return Response.ok(self.wardrobeController.getWardrobe(userId))
         if path.startswith("/wardrobe/items/"):

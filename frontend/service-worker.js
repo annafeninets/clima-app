@@ -25,6 +25,7 @@ self.addEventListener("push", (event) => {
     body: payload.body || "Посмотрите образ на сегодня.",
     icon: payload.icon,
     badge: payload.badge,
+    tag: payload.tag || "daily-outfit",
     data: { url }
   };
   event.waitUntil(self.registration.showNotification(title, options));
