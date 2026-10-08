@@ -3,7 +3,7 @@ import { state, clearSession, STORAGE_KEYS } from "./core/state.js?v=20261008-02
 import { renderAuth, submitAuth, toggleAuthMode, logout } from "./features/auth.js?v=20261003-6";
 import {
   composeOutfit, renderFavorites, renderHistory, renderHome, renderPlan, saveComposedOutfit, submitPlan
-} from "./features/outfits.js?v=20261008-03";
+} from "./features/outfits.js?v=20261008-04";
 import {
   changeLaundry, deleteItem, openItemForm, renderWardrobe
 } from "./features/wardrobe.js?v=20261008-01";

@@ -1,18 +1,12 @@
-import { request, photoUrl } from "../core/api.js";
+import { request } from "../core/api.js";
 import { state, PARTS } from "../core/state.js?v=20261008-02";
 import { escapeHTML, humanDate, icon, itemCountLabel, showToast, today } from "../ui/helpers.js";
 import { emptyState, heading, shell } from "../ui/layout.js";
-
-async function imageMarkup(item) {
-  const src = await photoUrl(item.photo);
-  return src
-    ? `<img src="${escapeHTML(src)}" alt="${escapeHTML(`${item.color || ""} ${item.type || "вещь"}`.trim())}" />`
-    : `<div class="photo-placeholder">${icon("image")}</div>`;
-}
+import { OutfitCollage } from "./outfit-collage.js?v=20261008-01";
 
 export async function outfitCard(outfit, favorite = null, allowSelect = true) {
   const items = outfit.items || [];
-  const photos = await Promise.all(items.slice(0, 2).map(imageMarkup));
+  const collage = await OutfitCollage(outfit);
   const favoriteButton = favorite
     ? `<button class="button danger small" data-action="remove-favorite" data-id="${favorite.id}">Убрать</button>`
     : `<button class="button secondary small" data-action="add-favorite" data-id="${outfit.id}">${icon("heart")}Сохранить</button>`;
@@ -28,7 +22,7 @@ export async function outfitCard(outfit, favorite = null, allowSelect = true) {
   }).join("") : "";
 
   return `<article class="card outfit-card">
-    <div class="outfit-photos ${items.length === 1 ? "single" : ""}">${photos.join("") || `<div class="photo-placeholder">${icon("hanger")}</div>`}</div>
+    ${collage}
     <div class="outfit-body"><div class="outfit-title"><h3>Образ на ${escapeHTML(humanDate(outfit.date))}</h3>${outfit.selected ? '<span class="badge">Выбран</span>' : ""}</div>
     <div class="outfit-meta">${escapeHTML(outfit.place || "")}${outfit.occasion ? ` · ${escapeHTML(outfit.occasion)}` : ""}</div>
     <div class="item-chips">${items.map((item) => `<span class="chip">${escapeHTML(item.color || "")} ${escapeHTML(item.type || "")}</span>`).join("")}</div>
