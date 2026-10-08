@@ -8,8 +8,9 @@ import {
   changeLaundry, deleteItem, openItemForm, renderWardrobe
 } from "./features/wardrobe.js?v=20261008-01";
 import {
-  renderSettings, saveNotifications, saveProfile, subscribePush, validateProfileFieldInput
-} from "./features/settings.js?v=20261004-04";
+  connectPush, handleNotificationToggle, renderSettings, saveNotifications, saveProfile,
+  validateProfileFieldInput
+} from "./features/settings.js?v=20261008-05";
 import { showToast } from "./ui/helpers.js";
 import { loadingError, shell } from "./ui/layout.js";
 
@@ -135,7 +136,7 @@ async function handleAction(element, event) {
       return render();
     }
     if (action === "subscribe-push") {
-      await subscribePush();
+      await connectPush(render);
       return;
     }
   } catch (error) {
@@ -192,6 +193,10 @@ document.addEventListener("input", async (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  if (event.target.id === "morning-notification-toggle") {
+    handleNotificationToggle(event, render);
+    return;
+  }
   if (event.target.id === "item-photo") {
     const file = event.target.files[0];
     const label = document.querySelector("#file-label");

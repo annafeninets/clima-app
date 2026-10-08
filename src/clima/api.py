@@ -14,6 +14,7 @@ from clima.handlers.schedule import ScheduleHandler
 from clima.handlers.settings import SettingsHandler
 from clima.handlers.upload import UploadHandler
 from clima.models.entities import Item
+from clima.models.entities.settings import Settings
 from clima.models.value_objects import Request, Response
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,9 @@ class ClimaApi:
         (r"/settings", "GET", "settingsHandler"),
         (r"/settings/theme", "PUT", "settingsHandler"),
         (r"/settings/notifications", "PUT", "settingsHandler"),
+        (r"/push/subscribe", "POST", "settingsHandler"),
         (r"/push/subscriptions", "POST", "settingsHandler"),
+        (r"/push/subscriptions", "DELETE", "settingsHandler"),
         (r"/account", "DELETE", "settingsHandler"),
         (r"/wardrobe", "GET", "callbackHandler"),
         (r"/wardrobe/items", "POST", "uploadHandler"),
@@ -92,6 +95,14 @@ def response_bytes(response: Response) -> tuple[bytes, str]:
 
 
 def to_jsonable(value):
+    if isinstance(value, Settings):
+        return {
+            "theme": to_jsonable(value.theme),
+            "notificationsEnabled": value.notificationsEnabled,
+            "notificationTime": to_jsonable(value.notificationTime),
+            "timeZone": value.timeZone,
+            "pushSubscribed": value.pushSubscription is not None,
+        }
     if isinstance(value, Item):
         result = {field.name: to_jsonable(getattr(value, field.name)) for field in fields(value)}
         result["photo"] = (

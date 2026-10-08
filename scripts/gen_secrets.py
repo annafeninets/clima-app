@@ -77,7 +77,7 @@ def main() -> int:
         line.startswith("POSTGRES_PASSWORD=") and line.partition("=")[2].strip()
         for line in args.env_file.read_text(encoding="utf-8").splitlines()
     ):
-        # Пароль роли уже записан в том postgres при первом запуске: смена значения в .env
+        # Пароль роли уже записан в том Postgres при первом запуске: смена значения в .env
         # без смены пароля в самой базе лишила бы backend доступа. Поэтому --force его не трогает.
         del values["POSTGRES_PASSWORD"]
     written = fill_env(args.env_file, values, args.force)

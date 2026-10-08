@@ -17,9 +17,24 @@ class NotificationController:
         user.setNotification(enabled, time)
         self.usersRepository.update(user)
 
-    def subscribePush(self, userId: int, subscription: PushSubscription) -> None:
+    def subscribePush(
+        self,
+        userId: int,
+        subscription: PushSubscription,
+        notificationTime: time | None = None,
+        timeZone: str | None = None,
+    ) -> None:
         user = self._user(userId)
         user.settings.pushSubscription = subscription
+        if notificationTime is not None:
+            user.setNotification(True, notificationTime)
+        if timeZone is not None:
+            user.settings.timeZone = timeZone
+        self.usersRepository.update(user)
+
+    def unsubscribePush(self, userId: int) -> None:
+        user = self._user(userId)
+        user.settings.pushSubscription = None
         self.usersRepository.update(user)
 
     def findDueUsers(self, now: datetime) -> list[User]:
@@ -36,15 +51,19 @@ class NotificationController:
         user = self._user(userId)
         if not user.settings.notificationsEnabled or user.settings.pushSubscription is None:
             return
-        labels = ", ".join(item.type for item in outfit.items)
-        body = f"Сегодня в {outfit.place}: {labels or 'откройте приложение, чтобы выбрать образ'}"
-        self.pushService.send(user.settings.pushSubscription, "Утренний аутфит", body)
+        self.pushService.send(
+            user.settings.pushSubscription,
+            "Утренний аутфит",
+            "Посмотрите образ на день",
+        )
 
     def sendHint(self, userId: int) -> None:
         user = self._user(userId)
         if user.settings.notificationsEnabled and user.settings.pushSubscription:
             self.pushService.send(
-                user.settings.pushSubscription, "Clima", "Добавьте вещи в гардероб, чтобы получать образы."
+                user.settings.pushSubscription,
+                "Утренний аутфит",
+                "Добавьте вещи в гардероб, чтобы получить образ на день.",
             )
 
     def _user(self, userId: int) -> User:

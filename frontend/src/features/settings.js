@@ -2,6 +2,46 @@ import { request } from "../core/api.js";
 import { state, STORAGE_KEYS } from "../core/state.js?v=20261008-02";
 import { escapeHTML, showToast } from "../ui/helpers.js";
 import { heading, shell } from "../ui/layout.js";
+import {
+  getCurrentSubscription, isIOSWithoutPWA, isPushSupported, requestNotificationPermission,
+  sendSubscriptionToServer, subscribeToPush, unsubscribeFromPush
+} from "./push.js?v=20261008-01";
+
+const FALLBACK_TIME_ZONES = [
+  "Europe/Moscow", "Europe/Kaliningrad", "Europe/Samara", "Asia/Yekaterinburg",
+  "Asia/Novosibirsk", "Asia/Vladivostok", "Asia/Almaty", "Asia/Tbilisi",
+  "America/New_York", "America/Chicago", "America/Los_Angeles", "UTC"
+];
+
+function timeZoneOptions(selected) {
+  let zones = FALLBACK_TIME_ZONES;
+  if (typeof Intl.supportedValuesOf === "function") {
+    zones = [...new Set(["UTC", ...Intl.supportedValuesOf("timeZone")])];
+  }
+  if (selected && !zones.includes(selected)) zones.push(selected);
+  return zones.map((zone) =>
+    `<option value="${escapeHTML(zone)}" ${zone === selected ? "selected" : ""}>${escapeHTML(zone)}</option>`
+  ).join("");
+}
+
+function notificationStatusMarkup() {
+  if (!isPushSupported()) {
+    return `<div class="push-status error" role="status">Ваш браузер не поддерживает уведомления.</div>`;
+  }
+  if (isIOSWithoutPWA()) {
+    return `<div class="push-status ios" role="status"><strong>ⓘ Уведомления на iPhone</strong><span>Чтобы получать уведомления на iPhone, добавьте Clima на рабочий стол: нажмите «Поделиться» в Safari → «На экран Домой».</span></div>`;
+  }
+  if (state.settings.notificationsEnabled && state.settings.pushSubscribed) {
+    return `<div class="push-status success" role="status">Уведомления подключены</div>`;
+  }
+  if (Notification.permission === "denied") {
+    return `<div class="push-status error" role="status">Уведомления отключены в настройках браузера.</div>`;
+  }
+  if (!state.publicVapidKey) {
+    return `<div class="push-status info" role="status">Подключение уведомлений пока недоступно.</div>`;
+  }
+  return `<div class="push-status info" id="push-status" role="status" aria-live="polite"></div>`;
+}
 
 const PROFILE_SUGGESTIONS = {
   location: ["Москва", "Санкт-Петербург", "Казань", "Екатеринбург", "Новосибирск"],
@@ -41,7 +81,15 @@ export async function renderSettings() {
   if (state.settingsTab === "profile") {
     panel = `<h2>О вас и вашем стиле</h2><p class="page-subtitle">Эти данные помогают выбирать сочетания, которые нравятся именно вам.</p><form id="profile-form" class="form-grid" novalidate>${profileField("location", "Ваш город", state.location, "Например, Санкт-Петербург", true)}${profileField("style", "Стиль", state.profile.style, "Например, casual, минимализм")}${profileField("colors", "Любимые цвета", state.profile.colors, "Например, зелёный, бежевый")}${profileField("sizes", "Размеры", state.profile.sizes, "Например, M, 38")}${profileField("bodyFeatures", "Предпочтительный силуэт", state.profile.bodyFeatures, "Например, прямой, свободный")}<div class="form-errors wide" id="profile-form-errors" role="alert" aria-live="polite"></div><div class="wide"><button class="button" type="submit">Сохранить изменения</button></div></form>`;
   } else if (state.settingsTab === "notifications") {
-    panel = `<h2>Утренний аутфит</h2><p class="page-subtitle">Настройте ежедневное уведомление. Push-уведомления доступны, если они настроены для приложения.</p><form id="notification-form"><div class="switch-row"><div><strong>Ежедневное уведомление</strong><div class="field-hint">Напоминать проверить образ на день</div></div><input class="switch" type="checkbox" name="enabled" ${state.settings.notificationsEnabled ? "checked" : ""} /></div><div class="form-grid" style="margin:18px 0"><div class="field"><label for="notificationTime">Время</label><input id="notificationTime" type="time" name="time" value="${escapeHTML(String(state.settings.notificationTime || "07:00").slice(0, 5))}" /></div><div class="field"><label for="timeZone">Часовой пояс</label><input id="timeZone" name="timeZone" value="${escapeHTML(state.settings.timeZone || "UTC")}" placeholder="Europe/Moscow" /></div></div><button class="button" type="submit">Сохранить настройки</button></form>${state.publicVapidKey ? `<button class="button secondary small" style="margin-top:16px" data-action="subscribe-push">Подключить push-уведомления</button>` : `<p class="field-hint" style="margin-top:16px">Push-уведомления не настроены для этого приложения.</p>`}`;
+    const detectedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    const savedTimeZone = localStorage.getItem(STORAGE_KEYS.timeZone);
+    const selectedTimeZone = savedTimeZone === state.settings.timeZone
+      ? savedTimeZone
+      : state.settings.timeZone === "UTC" && detectedTimeZone !== "UTC"
+        ? detectedTimeZone
+        : state.settings.timeZone || detectedTimeZone;
+    const permission = isPushSupported() ? Notification.permission : "unsupported";
+    panel = `<h2>Утренний аутфит</h2><p class="page-subtitle">Ежедневное напоминание посмотреть образ на день</p><form id="notification-form"><label class="notification-switch-row" for="morning-notification-toggle"><span><strong>Ежедневное уведомление</strong><span class="field-hint">Одно напоминание в выбранное время</span></span><input id="morning-notification-toggle" class="switch" type="checkbox" name="enabled" role="switch" aria-checked="${state.settings.notificationsEnabled}" ${state.settings.notificationsEnabled ? "checked" : ""} /></label>${notificationStatusMarkup()}<div class="form-grid notification-fields"><div class="field"><label for="notificationTime">Время</label><input id="notificationTime" type="time" name="time" value="${escapeHTML(String(state.settings.notificationTime || "07:00").slice(0, 5))}" /></div><div class="field"><label for="timeZone">Часовой пояс</label><select id="timeZone" name="timeZone">${timeZoneOptions(selectedTimeZone)}</select></div></div><button class="button notification-save" type="submit">Сохранить настройки</button></form>${permission === "default" && isPushSupported() && state.publicVapidKey && !isIOSWithoutPWA() ? `<button class="button notification-connect" data-action="subscribe-push" type="button">Подключить push-уведомления</button>` : ""}`;
   } else if (state.settingsTab === "appearance") {
     panel = `<h2>Внешний вид</h2><p class="page-subtitle">Выберите комфортную тему интерфейса.</p><div class="filter-pills"><button class="filter-pill ${state.settings.theme === "LIGHT" ? "active" : ""}" data-theme-set="LIGHT">Светлая</button><button class="filter-pill ${state.settings.theme === "DARK" ? "active" : ""}" data-theme-set="DARK">Тёмная</button></div>`;
   } else {
@@ -143,37 +191,129 @@ export function validateProfileFieldInput(input, markTouched = false) {
 
 export async function saveNotifications(event, rerender) {
   event.preventDefault();
-  const data = new FormData(event.currentTarget);
+  const form = event.currentTarget;
+  const data = new FormData(form);
+  const settings = {
+    enabled: data.get("enabled") === "on",
+    time: data.get("time") || "07:00",
+    timeZone: String(data.get("timeZone") || "UTC").trim()
+  };
   try {
-    await request("/settings/notifications", { method: "PUT", body: {
-      enabled: data.get("enabled") === "on", time: data.get("time") || "07:00",
-      timeZone: String(data.get("timeZone") || "UTC").trim()
-    } });
-    showToast("Настройки уведомлений сохранены");
+    localStorage.setItem(STORAGE_KEYS.timeZone, settings.timeZone);
+    if (settings.enabled) {
+      const subscription = await getCurrentSubscription();
+      if (subscription) await sendSubscriptionToServer(subscription, settings);
+      else await request("/settings/notifications", { method: "PUT", body: settings });
+    } else {
+      await request("/settings/notifications", { method: "PUT", body: settings });
+    }
+    showToast("Настройки сохранены");
     await rerender();
-  } catch (error) { showToast(error.message, true); }
+  } catch { showToast("Не удалось сохранить настройки. Проверьте данные и попробуйте ещё раз.", true); }
 }
 
-function decodeVapidKey(value) {
-  const padding = "=".repeat((4 - value.length % 4) % 4);
-  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
-  return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+function currentFormSettings(form) {
+  const data = new FormData(form);
+  return {
+    enabled: true,
+    time: data.get("time") || "07:00",
+    timeZone: String(data.get("timeZone") || "UTC").trim()
+  };
 }
 
-export async function subscribePush() {
-  const key = state.publicVapidKey.trim();
-  if (!key) throw new Error("Push-уведомления не настроены для этого приложения.");
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    throw new Error("Этот браузер не поддерживает Web Push.");
+function showPushStatus(message, type = "info") {
+  const status = document.querySelector("#push-status");
+  if (!status) return;
+  status.className = `push-status ${type}`;
+  status.textContent = message;
+}
+
+async function enableNotifications(form, rerender) {
+  const toggle = form.querySelector('[name="enabled"]');
+  if (!isPushSupported()) {
+    toggle.checked = false;
+    toggle.setAttribute("aria-checked", "false");
+    showPushStatus("Ваш браузер не поддерживает уведомления.", "error");
+    return;
   }
-  if (!window.isSecureContext) throw new Error("Web Push работает только через HTTPS или localhost.");
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") throw new Error("Разрешите уведомления в настройках браузера.");
-  const registration = await navigator.serviceWorker.register("/service-worker.js");
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: decodeVapidKey(key)
-  });
-  await request("/push/subscriptions", { method: "POST", body: subscription.toJSON() });
-  showToast("Push-уведомления подключены");
+  if (isIOSWithoutPWA()) {
+    toggle.checked = false;
+    toggle.setAttribute("aria-checked", "false");
+    showPushStatus("ⓘ Чтобы получать уведомления на iPhone, добавьте Clima на рабочий стол: нажмите «Поделиться» в Safari → «На экран Домой».", "ios");
+    return;
+  }
+  if (!window.isSecureContext) {
+    toggle.checked = false;
+    toggle.setAttribute("aria-checked", "false");
+    showPushStatus("Для уведомлений нужно открыть Clima по защищённому соединению.", "error");
+    return;
+  }
+  if (!state.publicVapidKey) {
+    toggle.checked = false;
+    toggle.setAttribute("aria-checked", "false");
+    showPushStatus("Подключение уведомлений пока недоступно.", "info");
+    return;
+  }
+  toggle.disabled = true;
+  showPushStatus("Подключаем уведомления…");
+  try {
+    const permission = await requestNotificationPermission();
+    if (permission !== "granted") {
+      toggle.checked = false;
+      toggle.setAttribute("aria-checked", "false");
+      showPushStatus("Уведомления отключены в настройках браузера.", "error");
+      return;
+    }
+    const settings = currentFormSettings(form);
+    localStorage.setItem(STORAGE_KEYS.timeZone, settings.timeZone);
+    const subscription = await subscribeToPush(state.publicVapidKey);
+    await sendSubscriptionToServer(subscription, settings);
+    showToast("Уведомления подключены");
+    await rerender();
+  } catch {
+    toggle.checked = false;
+    toggle.setAttribute("aria-checked", "false");
+    showPushStatus("Не удалось подключить уведомления. Проверьте соединение и повторите попытку.", "error");
+  } finally {
+    if (toggle.isConnected) toggle.disabled = false;
+  }
+}
+
+export async function handleNotificationToggle(event, rerender) {
+  const toggle = event.target;
+  if (toggle.id !== "morning-notification-toggle") return;
+  toggle.setAttribute("aria-checked", String(toggle.checked));
+  const form = toggle.form;
+  if (toggle.checked) {
+    await enableNotifications(form, rerender);
+    return;
+  }
+  toggle.disabled = true;
+  let settingsSaved = false;
+  try {
+    const settings = currentFormSettings(form);
+    settings.enabled = false;
+    await request("/settings/notifications", { method: "PUT", body: settings });
+    settingsSaved = true;
+    await request("/push/subscriptions", { method: "DELETE" });
+    if (isPushSupported()) await unsubscribeFromPush();
+    showToast("Уведомления отключены");
+    await rerender();
+  } catch {
+    if (settingsSaved) {
+      showToast("Уведомления выключены, но подписку браузера не удалось удалить.", true);
+      await rerender();
+    } else {
+      toggle.checked = true;
+      toggle.setAttribute("aria-checked", "true");
+      showPushStatus("Не удалось обновить настройки уведомлений. Попробуйте ещё раз.", "error");
+    }
+  } finally {
+    if (toggle.isConnected) toggle.disabled = false;
+  }
+}
+
+export async function connectPush(rerender) {
+  const form = document.querySelector("#notification-form");
+  if (form) await enableNotifications(form, rerender);
 }

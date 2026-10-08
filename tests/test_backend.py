@@ -11,6 +11,7 @@ from threading import Thread
 from time import monotonic
 from urllib.request import Request as HttpRequest, urlopen
 
+from clima.api import response_bytes
 from clima.boundaries.http_gateway import ClimaHTTPServer, create_handler
 from clima.container import Application
 from clima.errors import BadCombinationError, ValidationError
@@ -606,6 +607,45 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(settings.data.theme.value, "DARK")
         self.assertEqual(settings.data.notificationTime.isoformat(timespec="minutes"), "07:30")
         self.assertEqual(settings.data.timeZone, "Europe/Moscow")
+
+    def test_push_subscription_and_preferences_are_saved_without_exposing_keys(self):
+        saved = self.request("POST", "/push/subscribe", {
+            "subscription": {
+                "endpoint": "https://push.example.test/send/token",
+                "keys": {"p256dh": "public-key", "auth": "auth-key"},
+            },
+            "time": "06:45",
+            "timezone": "Europe/Moscow",
+        }, self.token)
+        self.assertTrue(saved.success)
+
+        settings = self.request("GET", "/settings", token=self.token)
+        self.assertTrue(settings.data.notificationsEnabled)
+        self.assertEqual(settings.data.notificationTime.isoformat(timespec="minutes"), "06:45")
+        self.assertEqual(settings.data.timeZone, "Europe/Moscow")
+        payload, _ = response_bytes(settings)
+        serialized = json.loads(payload)
+        self.assertTrue(serialized["data"]["pushSubscribed"])
+        self.assertNotIn("pushSubscription", serialized["data"])
+        self.assertNotIn("endpoint", serialized["data"])
+
+        removed = self.request("DELETE", "/push/subscriptions", token=self.token)
+        self.assertTrue(removed.success)
+        settings = self.request("GET", "/settings", token=self.token)
+        self.assertFalse(settings.data.pushSubscription)
+
+    def test_push_subscription_rejects_invalid_timezone_before_saving(self):
+        response = self.request("POST", "/push/subscribe", {
+            "subscription": {
+                "endpoint": "https://push.example.test/send/token",
+                "keys": {"p256dh": "public-key", "auth": "auth-key"},
+            },
+            "time": "06:45",
+            "timezone": "Invalid/Zone",
+        }, self.token)
+        self.assertEqual(response.status, 422)
+        settings = self.request("GET", "/settings", token=self.token)
+        self.assertIsNone(settings.data.pushSubscription)
 
     def test_account_confirmation_and_delete(self):
         pending = self.request("DELETE", "/account", token=self.token)

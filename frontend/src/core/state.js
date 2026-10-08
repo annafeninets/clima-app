@@ -2,7 +2,8 @@ export const STORAGE_KEYS = {
   token: "clima.token",
   login: "clima.login",
   theme: "clima.theme",
-  vapid: "clima.vapid"
+  vapid: "clima.vapid",
+  timeZone: "clima.timeZone"
 };
 
 export const SEASONS = ["WINTER", "SPRING", "SUMMER", "AUTUMN"];
@@ -42,6 +43,7 @@ export function clearSession() {
   state.login = "";
   localStorage.removeItem(STORAGE_KEYS.token);
   localStorage.removeItem(STORAGE_KEYS.login);
+  localStorage.removeItem(STORAGE_KEYS.timeZone);
 }
 
 export function saveSession(token, login) {

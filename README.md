@@ -62,6 +62,7 @@ docker compose up -d --build
 - Обновление: `git pull && docker compose up -d --build`. Данные в томах сохраняются, схема БД создаётся автоматически при старте backend (`CREATE TABLE IF NOT EXISTS`, под advisory-lock). Изменения существующих таблиц так не применятся — для них понадобится миграция.
 - `POSTGRES_PASSWORD` читается postgres только при создании тома. Если поменять его в `.env` позже, backend перестанет подключаться: смените пароль и в базе (`docker compose exec postgres psql -U clima -c "ALTER ROLE clima PASSWORD '…'"`). Поэтому `make secrets --force` пароль не перезаписывает.
 - Пересоздание VAPID-ключей (`--force`) делает уже оформленные push-подписки недействительными: пользователям нужно заново включить уведомления.
+- Push включается пользователем в настройках: браузерная подписка и выбранные время/часовой пояс сохраняются в PostgreSQL, а backend отправляет одно уведомление в день. VAPID-пару проект генерирует командой `make secrets` (или `uv run python scripts/gen_secrets.py`); отдельно её можно создать через `npx --yes web-push generate-vapid-keys`. Публичный ключ передаётся frontend, приватный остаётся только у backend. Push требует HTTPS (кроме `localhost`) и фоновой работы backend.
 
 ## Переход со старой версии на SQLite
 

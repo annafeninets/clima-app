@@ -78,6 +78,31 @@ class SettingsHandler(Handler):
         if request.path == "/push/subscriptions" and request.method == "POST":
             self.notificationController.subscribePush(userId, push_subscription(request.body))
             return Response.ok(message="Push-подписка сохранена")
+        if request.path == "/push/subscribe" and request.method == "POST":
+            subscription = request.body.get("subscription")
+            if not isinstance(subscription, dict):
+                raise ValidationError("Некорректная push-подписка")
+            parsedSubscription = push_subscription(subscription)
+            notificationTime = None
+            zone = None
+            if "time" in request.body or "timezone" in request.body:
+                if "time" not in request.body or "timezone" not in request.body:
+                    raise ValidationError("Укажите время и часовой пояс")
+                notificationTime = parse_time(request.body.get("time", "07:00"))
+                zone = request.body.get("timezone")
+                if not isinstance(zone, str):
+                    raise ValidationError("Некорректный часовой пояс")
+                try:
+                    ZoneInfo(zone)
+                except (ZoneInfoNotFoundError, ValueError) as error:
+                    raise ValidationError("Некорректный часовой пояс") from error
+            self.notificationController.subscribePush(
+                userId, parsedSubscription, notificationTime, zone
+            )
+            return Response.ok(message="Push-подписка сохранена")
+        if request.path == "/push/subscriptions" and request.method == "DELETE":
+            self.notificationController.unsubscribePush(userId)
+            return Response.ok(message="Push-подписка удалена")
         if request.path == "/account" and request.method == "DELETE":
             if request.query.get("confirm", "").lower() != "true":
                 return Response(

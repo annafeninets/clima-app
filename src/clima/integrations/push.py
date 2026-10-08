@@ -21,7 +21,11 @@ class PushService:
                     "endpoint": subscription.endpoint,
                     "keys": {"p256dh": subscription.p256dh, "auth": subscription.auth},
                 },
-                data=json.dumps({"title": title, "body": body}, ensure_ascii=False),
+                data=json.dumps({
+                    "title": title,
+                    "body": body,
+                    "url": "/outfits/today",
+                }, ensure_ascii=False),
                 vapid_private_key=private_key,
                 vapid_claims={"sub": subject},
                 ttl=3600,

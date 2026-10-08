@@ -119,8 +119,25 @@
 :root[data-theme="DARK"] .auth-visual .brand-mark svg { width: 22px; }
 :root[data-theme="DARK"] .auth-visual .brand-name { color: #f5e8ec; }
 :root[data-theme="DARK"] #notification-form .switch-row strong { color: #f5e8ec; font-size: 13px; }
-:root[data-theme="DARK"] #notification-form .field-hint { color: rgb(245 232 236 / 60%); font-size: 10px; }
+:root[data-theme="DARK"] #notification-form .field-hint { color: rgb(245 232 236 / 60%); font-size: 12px; }
 :root[data-theme="DARK"] #notification-form .form-grid { margin: 12px 0 !important; }
+:root[data-theme="DARK"] #notification-form .field label { color: #f5e8ec; }
+:root[data-theme="DARK"] #notification-form .field input,
+:root[data-theme="DARK"] #notification-form .field select {
+  padding: 12px 16px;
+  border: 1px solid rgb(216 167 177 / 20%);
+  border-radius: 10px;
+  background: #2c131a;
+  color: #f5e8ec;
+}
+:root[data-theme="DARK"] #notification-form .field input:focus,
+:root[data-theme="DARK"] #notification-form .field select:focus { border-color: #d8a7b1; }
+:root[data-theme="DARK"] #notification-form .notification-connect {
+  border: 1px solid #d8a7b1;
+  background: transparent;
+  color: #d8a7b1;
+}
+:root[data-theme="DARK"] #notification-form .notification-connect:hover { background: rgb(216 167 177 / 10%); }
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: var(--bg); color: var(--ink); }
@@ -301,6 +318,83 @@ h3 { font-size: 17px; margin-bottom: 6px; }
 .settings-panel { padding: 24px; }
 .settings-panel > h2 { margin-bottom: 5px; }
 .settings-panel > .page-subtitle { margin-bottom: 22px; }
+.notification-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  cursor: pointer;
+}
+.notification-switch-row > span { display: grid; gap: 4px; }
+.notification-switch-row strong { font-size: 14px; }
+#notification-form .switch {
+  appearance: none;
+  position: relative;
+  width: 52px;
+  min-width: 52px;
+  height: 30px;
+  min-height: 30px;
+  flex: 0 0 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 30px;
+  background: #3a1a22;
+  cursor: pointer;
+  transition: background .25s ease;
+}
+#notification-form .switch::after {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f5e8ec;
+  transition: transform .25s ease, background .25s ease;
+}
+#notification-form .switch:checked { background: #d8a7b1; }
+#notification-form .switch:checked::after {
+  transform: translateX(22px);
+  background: #35151e;
+}
+#notification-form .switch:focus-visible { outline: 2px solid #d8a7b1; outline-offset: 3px; }
+#notification-form .switch:disabled { cursor: wait; opacity: .7; }
+.notification-fields { margin: 18px 0; }
+.notification-save {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.notification-connect {
+  margin-top: 12px;
+  padding: 12px 24px;
+  border: 1px solid #d8a7b1;
+  border-radius: 12px;
+  background: transparent;
+  color: #d8a7b1;
+  font-weight: 600;
+  cursor: pointer;
+}
+.notification-connect:hover { background: rgb(216 167 177 / 10%); }
+.push-status {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.push-status:empty { display: none; }
+.push-status.error { background: rgb(255 100 100 / 10%); color: #ff8a8a; }
+.push-status.success { background: rgb(216 167 177 / 15%); color: #d8a7b1; }
+.push-status.info { background: rgb(245 232 236 / 8%); color: var(--ink); }
+.push-status.ios { display: grid; gap: 6px; background: rgb(216 167 177 / 12%); color: var(--ink); }
+:root:not([data-theme="DARK"]) .push-status.success { color: #7a3a4a; }
+:root:not([data-theme="DARK"]) .push-status.ios strong { color: #7a3a4a; }
+:root[data-theme="DARK"] .push-status.ios strong { color: #d8a7b1; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
 .item-form-grid { overflow: visible; }
 .form-grid .wide { grid-column: 1 / -1; }
