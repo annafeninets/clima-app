@@ -146,6 +146,13 @@ def push_subscription(data: dict) -> PushSubscription:
     )
 
 
+def client_ip(headers: dict[str, str]) -> str:
+    forwarded = headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return headers.get("x-client-ip", "")
+
+
 def _item_values(data: dict) -> dict:
     aliases = {
         "min_temperature": "minTemperature",

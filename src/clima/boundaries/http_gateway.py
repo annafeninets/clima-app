@@ -111,10 +111,11 @@ def create_handler(
             }
             authorization = self.headers.get("Authorization", "")
             token = authorization[7:].strip() if authorization.lower().startswith("bearer ") else ""
+            headers = {key.lower(): value for key, value in self.headers.items()}
+            headers["x-client-ip"] = self.client_address[0]
             return Request(
                 action="", args=[], token=token, method=self.command, path=parsed.path,
-                query=query, body=body,
-                headers={key.lower(): value for key, value in self.headers.items()},
+                query=query, body=body, headers=headers,
             )
 
         def log_message(self, format, *args):

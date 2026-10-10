@@ -3,18 +3,20 @@ from clima.controllers.profile import ProfileController
 from clima.controllers.users import AuthController
 from clima.errors import ValidationError
 from clima.handlers.base import Handler
-from clima.handlers.helpers import outfit_filter, preferences_from_data
+from clima.handlers.helpers import client_ip, outfit_filter, preferences_from_data
+from clima.integrations.weather import WeatherService
 from clima.models.value_objects import Request, Response
 
 
 class CommandHandler(Handler):
     def __init__(
         self, authController: AuthController, profileController: ProfileController,
-        outfitController: OutfitController,
+        outfitController: OutfitController, weatherService: WeatherService,
     ):
         super().__init__(authController)
         self.profileController = profileController
         self.outfitController = outfitController
+        self.weatherService = weatherService
 
     def handle(self, request: Request) -> Response:
         if request.path == "/auth/form" and request.method == "GET":
@@ -30,6 +32,20 @@ class CommandHandler(Handler):
             )
             return Response.ok(session, "Добро пожаловать")
         userId = self.authenticate(request)
+        if request.path == "/places/context" and request.method == "GET":
+            return Response.ok(self.weatherService.placeContext(client_ip(request.headers)))
+        if request.path == "/places/search" and request.method == "GET":
+            query = request.query.get("q", "")
+            country = request.query.get("country", "").strip().upper() or None
+            seed = request.query.get("seed", "").strip() or None
+            try:
+                limit = int(request.query.get("limit", "10"))
+            except ValueError as error:
+                raise ValidationError("Параметр limit должен быть числом") from error
+            places = self.weatherService.suggestPlaces(
+                query, country, seed, client_ip(request.headers), limit,
+            )
+            return Response.ok(places)
         if request.path == "/outfits/plan" and request.method == "GET":
             return Response.ok(self.outfitController.planOutfit(
                 userId, outfit_filter(request.query, self.profileController.getLocation(userId))

@@ -72,3 +72,27 @@ class WeatherCacheTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(get_json.call_count, 1)
         self.assertEqual(json.loads(service.cache.get("weather:om-geo:moscow"))["name"], "Москва")
+
+    def test_suggest_places_filters_populated_locations(self):
+        service = WeatherService()
+        geo = {
+            "results": [
+                {
+                    "name": "Москва", "country_code": "RU", "country": "Россия",
+                    "admin1": "Москва", "feature_code": "PPLC", "population": 10000000,
+                },
+                {
+                    "name": "Московский", "country_code": "RU", "country": "Россия",
+                    "admin1": "Московская область", "feature_code": "PPL", "population": 1000,
+                },
+                {
+                    "name": "Europe", "country_code": "EU", "country": "Europe",
+                    "admin1": "", "feature_code": "CONT", "population": 0,
+                },
+            ]
+        }
+        with patch.object(service, "_get_json", return_value=geo):
+            places = service.suggestPlaces("Моск", "RU", limit=5)
+        self.assertEqual(len(places), 2)
+        self.assertEqual(places[0]["name"], "Москва")
+        self.assertEqual(places[0]["countryCode"], "RU")

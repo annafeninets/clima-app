@@ -245,8 +245,11 @@ h3 { font-size: 17px; margin-bottom: 6px; }
 .autocomplete { position: relative; min-width: 0; }
 .autocomplete-list, .autocomplete-list[hidden] { position: absolute; z-index: 5; inset: calc(100% + 5px) 0 auto; display: grid; max-height: 260px; overflow-y: auto; overscroll-behavior: contain; padding: 5px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: var(--shadow); }
 .autocomplete-list[hidden] { display: none; }
-.autocomplete-option { width: 100%; border: 0; border-radius: 7px; padding: 9px 10px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font-size: 13px; }
+.autocomplete-option { display: grid; gap: 2px; width: 100%; border: 0; border-radius: 7px; padding: 9px 10px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; font-size: 13px; }
+.autocomplete-option-title { font-weight: 500; }
+.autocomplete-option-subtitle { font-size: 11px; color: var(--muted); }
 .autocomplete-option:hover, .autocomplete-option[aria-selected="true"] { background: var(--green-2); color: var(--green); }
+.autocomplete-option:hover .autocomplete-option-subtitle, .autocomplete-option[aria-selected="true"] .autocomplete-option-subtitle { color: inherit; opacity: 0.85; }
 .outfit-grid, .wardrobe-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .outfit-card { overflow: hidden; }
 .outfit-collage { display: grid; gap: 10px; padding: 14px; background: #fdfbf2; }
@@ -549,3 +552,4 @@ h3 { font-size: 17px; margin-bottom: 6px; }
   .weather-form .button { grid-column: auto; }
   .topbar-date { font-size: 11px; }
 }
+

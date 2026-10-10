@@ -55,7 +55,6 @@ function wardrobeStatusMarkup(status) {
 }
 
 const PROFILE_SUGGESTIONS = {
-  location: ["Москва", "Санкт-Петербург", "Казань", "Екатеринбург", "Новосибирск"],
   style: [
     "Классический", "Casual", "Спортивный", "Минимализм", "Романтический",
     "Деловой", "Уличный", "Бохо", "Базовый", "Повседневный", "Элегантный",
@@ -78,7 +77,11 @@ const PROFILE_SUGGESTIONS = {
 function profileField(name, label, value, placeholder, wide = false) {
   const suggestions = PROFILE_SUGGESTIONS[name];
   const listId = `profile-${name}-suggestions`;
-  return `<div class="field ${wide ? "wide" : ""}"><label for="profile-${name}">${label}</label><input id="profile-${name}" name="${name}" value="${escapeHTML(value)}" placeholder="${placeholder}" maxlength="${name === "location" ? 200 : 500}" ${name === "location" ? "required" : ""} list="${listId}" aria-describedby="profile-${name}-hint profile-${name}-error" autocomplete="off" /><datalist id="${listId}">${suggestions.map((option) => `<option value="${escapeHTML(option)}"></option>`).join("")}</datalist><small class="field-hint" id="profile-${name}-hint">${name === "location" ? "Начните вводить город или выберите из списка." : "Можно выбрать вариант или перечислить несколько через запятую."}</small><small class="field-error" id="profile-${name}-error" aria-live="polite"></small></div>`;
+  const showDataList = Boolean(suggestions);
+  const locationField = name === "location"
+    ? `<div class="autocomplete"><input id="profile-${name}" name="${name}" value="${escapeHTML(value)}" placeholder="${placeholder}" maxlength="200" required autocomplete="off" aria-describedby="profile-${name}-hint profile-${name}-error" /></div>`
+    : `<input id="profile-${name}" name="${name}" value="${escapeHTML(value)}" placeholder="${placeholder}" maxlength="500" ${showDataList ? `list="${listId}"` : ""} aria-describedby="profile-${name}-hint profile-${name}-error" autocomplete="off" />`;
+  return `<div class="field ${wide ? "wide" : ""}"><label for="profile-${name}">${label}</label>${locationField}${showDataList && name !== "location" ? `<datalist id="${listId}">${suggestions.map((option) => `<option value="${escapeHTML(option)}"></option>`).join("")}</datalist>` : ""}<small class="field-hint" id="profile-${name}-hint">${name === "location" ? "Начните вводить город или выберите из подсказок." : "Можно выбрать вариант или перечислить несколько через запятую."}</small><small class="field-error" id="profile-${name}-error" aria-live="polite"></small></div>`;
 }
 
 export async function renderSettings() {

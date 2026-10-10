@@ -16,6 +16,9 @@ from clima.models.value_objects import WeatherData
 logger = logging.getLogger(__name__)
 
 LOCATION_TTL_SECONDS = 30 * 24 * 3600
+PLACE_SUGGEST_TTL_SECONDS = 6 * 3600
+IP_CONTEXT_TTL_SECONDS = 24 * 3600
+PLACE_FEATURE_CODES = frozenset({"PPL", "PPLA", "PPLA2", "PPLA3", "PPLA4", "PPLC"})
 
 
 class WeatherService:
@@ -104,6 +107,115 @@ class WeatherService:
             place=location.get("name", place), date=date, temperature=temperature,
             conditions=self._conditions.get(weather_code, "неизвестные условия"),
         )
+
+    def suggestPlaces(
+        self, query: str, country_code: str | None = None, seed: str | None = None,
+        client_ip: str = "", limit: int = 10,
+    ) -> list[dict]:
+        limit = max(1, min(limit, 20))
+        trimmed = (query or "").strip()
+        if len(trimmed) >= 2:
+            return self._searchPlaces(trimmed, country_code, limit)
+        return self._defaultPlaces(country_code, seed, client_ip, limit)
+
+    def placeContext(self, client_ip: str = "") -> dict:
+        context = self._ipContext(client_ip)
+        country = (context.get("countryCode") or "").upper()
+        return {
+            "countryCode": country,
+            "city": context.get("city") or "",
+            "region": context.get("regionName") or "",
+        }
+
+    def _defaultPlaces(
+        self, country_code: str | None, seed: str | None, client_ip: str, limit: int,
+    ) -> list[dict]:
+        country = (country_code or "").upper()
+        context = self._ipContext(client_ip)
+        if not country and context.get("countryCode"):
+            country = context["countryCode"].upper()
+        seeds: list[str] = []
+        if seed and seed.strip():
+            seeds.append(seed.strip())
+        if country and context.get("countryCode", "").upper() == country:
+            for value in (context.get("city"), context.get("regionName")):
+                if value and value not in seeds:
+                    seeds.append(value)
+        merged: list[dict] = []
+        seen: set[tuple[str, str]] = set()
+        for name in seeds:
+            for place in self._searchPlaces(name, country or None, 20):
+                key = (place["name"].casefold(), place["countryCode"].upper())
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append(place)
+        merged.sort(key=lambda item: (-item.get("population", 0), item["name"]))
+        return merged[:limit]
+
+    def _searchPlaces(self, query: str, country_code: str | None, limit: int) -> list[dict]:
+        key = f"places:suggest:{country_code or ''}:{query.casefold()}:{limit}"
+        cached = self.cache.get(key)
+        if cached:
+            try:
+                return json.loads(cached)
+            except ValueError:
+                pass
+        params: dict = {"name": query, "count": min(limit * 2, 100), "language": "ru"}
+        if country_code:
+            params["countryCode"] = country_code.upper()
+        geo = self._get_json(self.geocodingUrl, params)
+        places = [
+            self._normalizePlace(item)
+            for item in (geo.get("results") or [])
+            if self._isPlace(item)
+        ]
+        places.sort(key=lambda item: (-item.get("population", 0), item["name"]))
+        places = places[:limit]
+        self.cache.set(key, json.dumps(places, ensure_ascii=False), PLACE_SUGGEST_TTL_SECONDS)
+        return places
+
+    @staticmethod
+    def _isPlace(item: dict) -> bool:
+        return item.get("feature_code") in PLACE_FEATURE_CODES
+
+    @staticmethod
+    def _normalizePlace(item: dict) -> dict:
+        return {
+            "name": item.get("name") or "",
+            "countryCode": item.get("country_code") or "",
+            "country": item.get("country") or "",
+            "region": item.get("admin1") or "",
+            "population": int(item.get("population") or 0),
+        }
+
+    def _ipContext(self, client_ip: str) -> dict:
+        ip = (client_ip or "").strip()
+        if not ip or ip.startswith(("127.", "10.", "192.168.", "::1", "fe80:")):
+            return {}
+        cache_key = f"places:ip:{ip}"
+        cached = self.cache.get(cache_key)
+        if cached:
+            try:
+                return json.loads(cached)
+            except ValueError:
+                pass
+        try:
+            payload = self._get_json(
+                f"http://ip-api.com/json/{ip}",
+                {"fields": "status,countryCode,city,regionName"},
+            )
+        except (URLError, TimeoutError, OSError, ValueError, KeyError, TypeError):
+            return {}
+        if payload.get("status") != "success":
+            return {}
+        context = {
+            "countryCode": (payload.get("countryCode") or "").upper(),
+            "city": payload.get("city") or "",
+            "regionName": payload.get("regionName") or "",
+        }
+        self.cache.set(cache_key, json.dumps(context, ensure_ascii=False), IP_CONTEXT_TTL_SECONDS)
+        return context
 
     def _getLocation(self, place: str) -> dict:
         key = f"weather:om-geo:{place.strip().casefold()}"

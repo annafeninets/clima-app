@@ -56,7 +56,8 @@ class Application:
             self.usersRepository, self.pushService
         )
         commandHandler = CommandHandler(
-            self.authController, self.profileController, self.outfitController
+            self.authController, self.profileController, self.outfitController,
+            self.weatherService,
         )
         uploadHandler = UploadHandler(self.authController, self.wardrobeController)
         callbackHandler = CallbackHandler(

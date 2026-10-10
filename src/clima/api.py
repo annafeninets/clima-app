@@ -43,6 +43,8 @@ class ClimaApi:
         (r"/wardrobe/items/\d+/photo", "GET|PUT", "callbackHandler"),
         (r"/wardrobe/items/\d+/laundry", "PUT", "callbackHandler"),
         (r"/wardrobe/items/\d+", "GET|PUT|DELETE", "callbackHandler"),
+        (r"/places/context", "GET", "commandHandler"),
+        (r"/places/search", "GET", "commandHandler"),
         (r"/outfits/plan", "GET", "commandHandler"),
         (r"/outfits/today", "GET", "commandHandler"),
         (r"/outfits/history", "GET", "commandHandler"),

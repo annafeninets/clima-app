@@ -13,6 +13,7 @@ import {
 } from "./features/settings.js?v=20261008-07";
 import { showToast } from "./ui/helpers.js";
 import { loadingError, shell } from "./ui/layout.js";
+import { initAutocomplete } from "./utils/autocomplete.js";
 
 const app = document.querySelector("#app");
 
@@ -57,14 +58,19 @@ async function render() {
       try { state.favorites = await request("/favorites"); }
       catch { state.favorites = []; }
       app.innerHTML = await renderHome();
-    } else if (state.page === "plan") app.innerHTML = await renderPlan();
-    else if (state.page === "wardrobe") app.innerHTML = await renderWardrobe();
+    } else if (state.page === "plan") {
+      app.innerHTML = await renderPlan();
+      const placeInput = app.querySelector('#place');
+      if (placeInput) initAutocomplete(placeInput, { seed: state.location });
+    } else if (state.page === "wardrobe") app.innerHTML = await renderWardrobe();
     else if (state.page === "favorites") app.innerHTML = await renderFavorites();
     else if (state.page === "history") app.innerHTML = await renderHistory();
     else if (state.page === "settings") {
       app.innerHTML = await renderSettings();
       app.querySelector("#profile-form")?.addEventListener("submit", (event) => saveProfile(event, render));
       app.querySelector("#notification-form")?.addEventListener("submit", (event) => saveNotifications(event, render));
+      const locationInput = app.querySelector('#profile-location');
+      if (locationInput) initAutocomplete(locationInput, { seed: state.location });
     }
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
