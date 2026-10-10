@@ -32,6 +32,13 @@ class OutfitsRepository(Repository[Outfit]):
         )
         return self._hydrate(rows)
 
+    def findToRateByUser(self, userId: int) -> list[Outfit]:
+        rows = self.db.query(
+            """SELECT * FROM outfits WHERE user_id=%s AND selected AND rating = 0
+               ORDER BY created_at DESC, id DESC""", (userId,)
+        )
+        return self._hydrate(rows)
+
     def findSelectedByUser(self, userId: int, date: date) -> list[Outfit]:
         rows = self.db.query(
             """SELECT * FROM outfits WHERE user_id=%s AND outfit_date=%s AND selected

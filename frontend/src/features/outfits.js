@@ -88,35 +88,36 @@ export async function submitPlan(event, rerender) {
     try {
       state.wardrobe = await request("/wardrobe");
     } catch (err) {
-      // If we can't load wardrobe, we skip the client-side validation
-      console.warn("Could not load wardrobe for validation", err);
-      state.wardrobe = [];
+      // If we can't load wardrobe, we show an error and return
+      showToast("Не удалось загрузить гардероб. Проверьте соединение и попробуйте снова.", true);
+      return;
     }
   }
-  try {
-    // Check wardrobe for sufficient basic items if wardrobe data is available
-    if (state.wardrobe && state.wardrobe.length > 0) {
-      const eligible = state.wardrobe.filter((item) => !item.inLaundry && !item.deleted);
-      const partsSet = new Set(eligible.map(item => item.part));
-      const required = ['TOP', 'BOTTOM', 'SHOES'];
-      if (!required.every(part => partsSet.has(part))) {
-        showToast("Недостаточно вещей в гардеробе для создания образа. Нужно хотя бы одно верха, низа и обуви.", true);
-        return;
-      }
-    }
 
+  // Check wardrobe for sufficient basic items
+  const eligible = state.wardrobe.filter((item) => !item.inLaundry && !item.deleted);
+  if (eligible.length === 0) {
+    showToast("В гардеробе нет доступных вещей. Добавьте вещи в гардероб.", true);
+    return;
+  }
+  const partsSet = new Set(eligible.map(item => item.part));
+  const required = ['TOP', 'BOTTOM', 'SHOES'];
+  if (!required.every(part => partsSet.has(part))) {
+    showToast("Недостаточно вещей в гардеробе для создания образа. Нужно хотя бы одно верха, низа и обуви.", true);
+    return;
+  }
+
+  try {
     state.location = params.get("place");
     await request("/profile/location", { method: "PUT", body: { location: state.location } });
     state.outfits = await request(`/outfits/plan?${params.toString()}`);
 
-    // Check if we got an empty array which might indicate no weather forecast
-    // or simply no possible outfits
     if (state.outfits.length === 0) {
       // Try to determine if it's due to no weather forecast
       // For now, we'll show a more specific message
       const place = params.get('place');
       const date = params.get('date');
-      showToast(`Для выбранной даты ${date} и места ${place} прогноз погоды недоступен. Пожалуйста, выберите другую дату или проверьте правильность введенного места.`);
+      showToast(`Для выбранной даты ${date} и места ${place} не удалось подобрать образ. Проверьте, пожалуйста, ваш гардероб на наличие подходящей одежды и попробуйте изменить дату или место.`);
     } else {
       showToast(`Подобрали образов: ${state.outfits.length}`);
     }
@@ -144,9 +145,9 @@ export async function composeOutfit() {
     try {
       state.wardrobe = await request("/wardrobe");
     } catch (err) {
-      // If we can't load wardrobe, we skip the client-side validation
-      console.warn("Could not load wardrobe for validation", err);
-      state.wardrobe = [];
+      // If we can't load wardrobe, we show an error and return
+      showToast("Не удалось загрузить гардероб. Проверьте соединение и попробуйте снова.", true);
+      return;
     }
   }
   const eligible = state.wardrobe.filter((item) => !item.inLaundry && !item.deleted);

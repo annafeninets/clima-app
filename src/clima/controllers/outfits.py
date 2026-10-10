@@ -362,6 +362,9 @@ class OutfitController:
     def getOutfitHistory(self, userId: int) -> list[Outfit]:
         return self.outfitsRepository.findHistoryByUser(userId)
 
+    def getOutfitsToRate(self, userId: int) -> list[Outfit]:
+        return self.outfitsRepository.findToRateByUser(userId)
+
     def createOutfitFromItems(self, userId: int, itemIds: list[int]) -> Outfit:
         if len(itemIds) < 1 or len(set(itemIds)) != len(itemIds):
             raise ValidationError("Выберите одну или несколько разных вещей")
