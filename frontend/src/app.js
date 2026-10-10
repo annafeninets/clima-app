@@ -117,8 +117,21 @@ async function handleAction(element, event) {
       return render();
     }
     if (action === "select-outfit") {
-      await request(`/outfits/${element.dataset.id}/select`, { method: "POST" });
-      showToast("Образ добавлен в историю");
+      // Disable button during request to prevent double-clicks
+      element.disabled = true;
+      const originalText = element.innerHTML;
+      element.innerHTML = `${icon("spinner")}Подбираем…`;
+      try {
+        await request(`/outfits/${element.dataset.id}/select`, { method: "POST" });
+        showToast("Образ добавлен в историю");
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        if (element.isConnected) {
+          element.disabled = false;
+          element.innerHTML = originalText;
+        }
+      }
       return render();
     }
     if (action === "add-favorite") {

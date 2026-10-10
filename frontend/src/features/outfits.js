@@ -44,7 +44,7 @@ export async function renderHome() {
 }
 
 export function planForm() {
-  return `<form id="plan-form" class="card weather-form"><div class="field"><label for="place">Город или место</label><input id="place" name="place" placeholder="Например, Москва" value="${escapeHTML(state.location)}" required maxlength="200" /></div><div class="field"><label for="plan-date">Дата</label><input id="plan-date" type="date" name="date" value="${today()}" required /></div><div class="field"><label for="occasion">Повод</label><select id="occasion" name="occasion"><option value="everyday">На каждый день</option><option value="work">Работа</option><option value="sport">Спорт</option><option value="party">Вечеринка</option><option value="formal">Торжественный</option></select></div><button class="button" type="submit">${icon("sparkle")}Подобрать</button></form>`;
+  return `<form id="plan-form" class="card weather-form"><div class="field"><label for="place">Город или место</label><input id="place" name="place" placeholder="Например, Москва" value="${escapeHTML(state.location)}" required maxlength="200" /></div><div class="field"><label for="plan-date">Дата</label><input id="plan-date" type="date" name="date" value="${escapeHTML(state.planDate || today())}" required /></div><div class="field"><label for="occasion">Повод</label><select id="occasion" name="occasion"><option value="everyday">На каждый день</option><option value="work">Работа</option><option value="sport">Спорт</option><option value="party">Вечеринка</option><option value="formal">Торжественный</option></select></div><button class="button" type="submit">${icon("sparkle")}Подобрать</button></form>`;
 }
 
 export async function renderPlan() {
@@ -71,7 +71,7 @@ export async function renderHistory() {
 
 export async function submitPlan(event, rerender) {
   event.preventDefault();
-  const form = event.currentTarget;
+  const form = event.target;
   if (form.dataset.submitting === "true") return;
   form.dataset.submitting = "true";
   const button = form.querySelector('button[type="submit"]');
@@ -82,14 +82,53 @@ export async function submitPlan(event, rerender) {
     place: String(data.get("place")).trim(), date: String(data.get("date")),
     occasion: String(data.get("occasion"))
   });
+  state.planDate = params.get("date");
+  // Ensure we have up-to-date wardrobe for validation
+  if (state.wardrobe === undefined) {
+    try {
+      state.wardrobe = await request("/wardrobe");
+    } catch (err) {
+      // If we can't load wardrobe, we skip the client-side validation
+      console.warn("Could not load wardrobe for validation", err);
+      state.wardrobe = [];
+    }
+  }
   try {
+    // Check wardrobe for sufficient basic items if wardrobe data is available
+    if (state.wardrobe && state.wardrobe.length > 0) {
+      const eligible = state.wardrobe.filter((item) => !item.inLaundry && !item.deleted);
+      const partsSet = new Set(eligible.map(item => item.part));
+      const required = ['TOP', 'BOTTOM', 'SHOES'];
+      if (!required.every(part => partsSet.has(part))) {
+        showToast("Недостаточно вещей в гардеробе для создания образа. Нужно хотя бы одно верха, низа и обуви.", true);
+        return;
+      }
+    }
+
     state.location = params.get("place");
     await request("/profile/location", { method: "PUT", body: { location: state.location } });
     state.outfits = await request(`/outfits/plan?${params.toString()}`);
-    showToast(state.outfits.length ? `Подобрали образов: ${state.outfits.length}` : "На эту дату подходящих сочетаний пока нет");
+
+    // Check if we got an empty array which might indicate no weather forecast
+    // or simply no possible outfits
+    if (state.outfits.length === 0) {
+      // Try to determine if it's due to no weather forecast
+      // For now, we'll show a more specific message
+      const place = params.get('place');
+      const date = params.get('date');
+      showToast(`Для выбранной даты ${date} и места ${place} прогноз погоды недоступен. Пожалуйста, выберите другую дату или проверьте правильность введенного места.`);
+    } else {
+      showToast(`Подобрали образов: ${state.outfits.length}`);
+    }
     await rerender();
   } catch (error) {
-    showToast(error.message, true);
+    // Check if the error is related to weather forecast availability
+    const errorMessage = error.message.toLowerCase();
+    if (errorMessage.includes("weather") || errorMessage.includes("forecast") || errorMessage.includes("погод") || errorMessage.includes("прогност")) {
+      showToast("Не удалось получить прогноз погоды для выбранной даты и места. Пожалуйста, проверьте правильность введенного места и попробуйте другую дату.");
+    } else {
+      showToast(error.message, true);
+    }
   } finally {
     if (form.isConnected) {
       delete form.dataset.submitting;
@@ -100,15 +139,36 @@ export async function submitPlan(event, rerender) {
 }
 
 export async function composeOutfit() {
+  // Ensure we have up-to-date wardrobe for validation
+  if (state.wardrobe === undefined) {
+    try {
+      state.wardrobe = await request("/wardrobe");
+    } catch (err) {
+      // If we can't load wardrobe, we skip the client-side validation
+      console.warn("Could not load wardrobe for validation", err);
+      state.wardrobe = [];
+    }
+  }
   const eligible = state.wardrobe.filter((item) => !item.inLaundry && !item.deleted);
+  const partsSet = new Set(eligible.map(item => item.part));
+  const required = ['TOP', 'BOTTOM', 'SHOES'];
+  if (!required.every(part => partsSet.has(part))) {
+    showToast("Недостаточно вещей в гардеробе для создания образа. Нужно хотя бы одно верха, низа и обуви.", true);
+    return;
+  }
+
   const options = eligible.map((item) => `<label class="season-option"><input type="checkbox" name="compose-item" value="${item.id}" /><span>${escapeHTML(item.color)} ${escapeHTML(item.type)} · ${escapeHTML(PARTS[item.part] || "")}</span></label>`).join("");
   const root = document.querySelector("#modal-root");
+  if (!root) {
+    console.error("Modal root element not found");
+    return;
+  }
   root.innerHTML = `<div class="modal-backdrop" data-action="backdrop"><section class="modal" role="dialog" aria-modal="true"><header class="modal-header"><div><h2>Собрать свой образ</h2><p class="page-subtitle">Отметьте вещи, из которых хотите собрать комплект.</p></div><button class="modal-close" data-action="close-modal" aria-label="Закрыть">${icon("close")}</button></header><form id="compose-form"><div class="season-options">${options || "<p>Нет чистых вещей в гардеробе.</p>"}</div><footer class="modal-footer"><button type="button" class="button secondary" data-action="close-modal">Отмена</button><button class="button" type="submit" ${eligible.length ? "" : "disabled"}>Проверить и сохранить</button></footer></form></section></div>`;
 }
 
 export async function saveComposedOutfit(event, rerender) {
   event.preventDefault();
-  const itemIds = [...event.currentTarget.querySelectorAll('input[name="compose-item"]:checked')].map((input) => Number(input.value));
+  const itemIds = [...event.target.querySelectorAll('input[name="compose-item"]:checked')].map((input) => Number(input.value));
   try {
     const result = await request("/favorites/compose", { method: "POST", body: { itemIds } });
     document.querySelector("#modal-root").innerHTML = "";

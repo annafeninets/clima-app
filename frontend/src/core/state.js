@@ -31,6 +31,7 @@ export const state = {
   profile: {},
   settings: {},
   location: "",
+  planDate: "",
   filter: "ALL",
   search: "",
   settingsTab: "profile",
