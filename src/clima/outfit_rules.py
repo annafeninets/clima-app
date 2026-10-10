@@ -22,6 +22,9 @@
 
 from __future__ import annotations
 
+from collections import Counter
+from dataclasses import dataclass
+
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
@@ -32,7 +35,6 @@ from clima.models.entities import Item, Outfit, Preferences
 from clima.models.entities.item import accessory_category_for_type, expected_part_for_type
 from clima.models.enums import ItemPart, Season
 from clima.models.value_objects import CheckResult, WeatherData
-
 
 class Occasion(StrEnum):
     EVERYDAY = "everyday"
@@ -45,7 +47,6 @@ class Occasion(StrEnum):
     PARTY = "party"
     OUTDOOR = "outdoor"
 
-
 class TemperatureBand(StrEnum):
     HOT = "hot"          # > 28
     WARM = "warm"        # 20–28
@@ -53,7 +54,6 @@ class TemperatureBand(StrEnum):
     CHILLY = "chilly"    # 5–12
     COLD = "cold"        # −5–5
     FREEZING = "freezing"  # < −5
-
 
 # Справочник типов: категория, сезонность, формальность 1–5, теплота, материалы, маркеры.
 # Порядок важен: более специфичные типы стоят раньше («sweatshirt» раньше «shirt»).
@@ -69,8 +69,9 @@ CLOTHING_CATALOG: dict[str, dict] = {
         "markers": ("худи", "толстовк", "свитшот", "hoodie", "sweatshirt"),
         "compatible": ("bottom", "shoes", "outerwear", "accessory"),
     },
+    # Свитер: формальность 2 → 3 (не футболка, носится под пиджак)
     "sweater": {
-        "category": "top", "seasons": ("AUTUMN", "WINTER", "SPRING"), "formality": 2, "warmth": 3,
+        "category": "top", "seasons": ("AUTUMN", "WINTER", "SPRING"), "formality": 3, "warmth": 3,
         "materials": ("wool", "knit", "cashmere"),
         "markers": ("свитер", "джемпер", "пуловер", "водолазк", "sweater", "jumper"),
         "compatible": ("bottom", "shoes", "outerwear", "accessory"),
@@ -132,8 +133,9 @@ CLOTHING_CATALOG: dict[str, dict] = {
         "materials": ("wool", "cashmere"), "markers": ("пальто", "тренч", "coat", "trench"),
         "compatible": ("top", "bottom", "shoes", "accessory"),
     },
+    # Блейзер: формальность 5 → 4 (формальный, но не black tie)
     "blazer": {
-        "category": "outerwear", "seasons": ("SPRING", "AUTUMN", "SUMMER"), "formality": 5,
+        "category": "outerwear", "seasons": ("SPRING", "AUTUMN", "SUMMER"), "formality": 4,
         "warmth": 2, "materials": ("wool", "cotton"),
         "markers": ("пиджак", "блейзер", "жакет", "blazer"),
         "compatible": ("top", "bottom", "shoes", "accessory"),
@@ -288,7 +290,6 @@ OCCASION_FORBIDDEN_KEYS: dict[Occasion, frozenset[str]] = {
     Occasion.OUTDOOR: frozenset({"dress-shoes", "sandals", "loafers", "blazer", "dress"}),
 }
 
-
 @dataclass(frozen=True, slots=True)
 class BandRule:
     """Правило температурного диапазона (по ощущаемой температуре)."""
@@ -303,7 +304,6 @@ class BandRule:
     comfort_min: int
     max: int
     forbidden: frozenset[str]
-
 
 BAND_RULES: dict[TemperatureBand, BandRule] = {
     TemperatureBand.HOT: BandRule(
@@ -348,7 +348,6 @@ BAND_RULES: dict[TemperatureBand, BandRule] = {
     ),
 }
 
-
 # Мягкие предпочтения диапазона (строки таблицы из ТЗ): каждый подходящий тип даёт бонус к оценке.
 BAND_PREFERRED: dict[TemperatureBand, frozenset[str]] = {
     TemperatureBand.HOT: frozenset({
@@ -375,7 +374,6 @@ PREFERRED_BONUS = 5
 # Повод «работа»: за каждую вещь уровня smart casual и выше — бонус.
 WORK_FORMAL_BONUS = 4
 
-
 @dataclass(slots=True)
 class WeatherProfile:
     place: str
@@ -389,7 +387,6 @@ class WeatherProfile:
     uv: float = 0.0
     band: TemperatureBand = TemperatureBand.MILD
     source: str = "forecast"
-
 
 @dataclass(frozen=True, slots=True)
 class ItemFacts:
@@ -405,11 +402,9 @@ class ItemFacts:
     pattern: bool
     waterproof: bool
 
-
 def normalize_occasion(value: str | None) -> Occasion:
     key = (value or "everyday").strip().casefold()
     return OCCASION_ALIASES.get(key, Occasion.EVERYDAY)
-
 
 def wind_chill(temperature: float, wind_kmh: float) -> int:
     if temperature > 10 or wind_kmh < 5:
@@ -419,7 +414,6 @@ def wind_chill(temperature: float, wind_kmh: float) -> int:
         - 11.37 * (wind_kmh ** 0.16)
         + 0.3965 * temperature * (wind_kmh ** 0.16)
     )
-
 
 def band_for_feels_like(feels_like: int) -> TemperatureBand:
     if feels_like > 28:
@@ -433,7 +427,6 @@ def band_for_feels_like(feels_like: int) -> TemperatureBand:
     if feels_like >= -5:
         return TemperatureBand.COLD
     return TemperatureBand.FREEZING
-
 
 def profile_from_weather(weather: WeatherData) -> WeatherProfile:
     feels = weather.feelsLike if weather.feelsLike is not None else wind_chill(
@@ -459,7 +452,6 @@ def profile_from_weather(weather: WeatherData) -> WeatherProfile:
         source=weather.source,
     )
 
-
 def season_for(day: date, latitude: float | None = None) -> Season:
     """Сезон по дате с учётом полушария: в южном полушарии сезоны сдвинуты на полгода."""
     month = day.month
@@ -473,10 +465,8 @@ def season_for(day: date, latitude: float | None = None) -> Season:
         return Season.SUMMER
     return Season.AUTUMN
 
-
 def _normalize(text: str) -> str:
     return (text or "").casefold().replace("ё", "е")
-
 
 def catalog_entry_for(item: Item) -> dict:
     """Запись справочника для вещи.
@@ -498,17 +488,28 @@ def catalog_entry_for(item: Item) -> dict:
     fallback = _FALLBACK_BY_PART[item.part]
     return {"seasons": (), "materials": (), "compatible": (), **fallback}
 
-
 def formality_of(item: Item) -> int:
     code = _normalize(item.dressCode)
+    entry = catalog_entry_for(item)
+    # Ищем в каталоге только те вещи, что действительно распознаны по маркерам,
+    # а не через fallback. У fallback ключ есть, но seasons/materials пустые.
+    if entry.get("key") in CLOTHING_CATALOG and entry.get("markers"):
+        base = int(entry["formality"])
+        if any(word in code for word in ("sport", "спорт")):
+            return 1
+        if any(word in code for word in ("formal", "торже", "вечер", "black tie")):
+            return max(base, 4)
+        if any(word in code for word in ("work", "office", "офис", "smart")):
+            return max(base, 3)
+        return base
+    # Fallback — вещь не распознана каталогом, доверяем dressCode.
     if any(word in code for word in ("formal", "торже", "вечер", "black tie", "business")):
         return 5
     if any(word in code for word in ("work", "office", "офис", "smart")):
         return 4
     if any(word in code for word in ("sport", "спорт")):
         return 1
-    return int(catalog_entry_for(item)["formality"])
-
+    return 2
 
 @lru_cache(maxsize=8192)
 def _facts(
@@ -538,7 +539,6 @@ def _facts(
         waterproof=any(marker in text for marker in WATERPROOF_MARKERS),
     )
 
-
 def should_suggest_outerwear(profile: WeatherProfile) -> bool:
     if profile.band in {
         TemperatureBand.MILD, TemperatureBand.CHILLY, TemperatureBand.COLD, TemperatureBand.FREEZING,
@@ -546,14 +546,11 @@ def should_suggest_outerwear(profile: WeatherProfile) -> bool:
         return True
     return profile.precipitation >= 0.2 or profile.wind >= 28
 
-
 def should_suggest_scarf(profile: WeatherProfile) -> bool:
     return profile.band in {TemperatureBand.CHILLY, TemperatureBand.COLD, TemperatureBand.FREEZING}
 
-
 def should_suggest_sun(profile: WeatherProfile) -> bool:
     return profile.uv >= 5 or profile.band in {TemperatureBand.HOT, TemperatureBand.WARM}
-
 
 class CompatibilityRule:
     maxVariants = 3
@@ -1034,6 +1031,255 @@ class CompatibilityRule:
     @staticmethod
     def _shouldSuggestScarf(weather: WeatherData) -> bool:
         return should_suggest_scarf(profile_from_weather(weather))
+
+    def explainEmpty(
+        self,
+        items: list[Item],
+        weather: WeatherData,
+        occasion: str = "everyday",
+        preferences: Preferences | None = None,
+        season: Season | None = None,
+    ) -> str:
+        """Человеко-понятное объяснение, почему ни один образ не собрался.
+
+        Возвращает фразу для пользователя: что не так, где это исправить,
+        что именно поменять. Учитывает:
+        * верх+низ+обувь ИЛИ платье/комбинезон+обувь — оба варианта полного образа;
+        * вещи в стирке — подсказываем «заберите из стирки», а не «добавьте вещь»;
+        * разницу стилей — указываем конкретную вещь, которую нужно поправить.
+        """
+        profile = profile_from_weather(weather)
+        occ = normalize_occasion(occasion)
+        season = season or season_for(weather.date, weather.latitude)
+
+        # 1) Доступные вещи вообще есть?
+        raw_candidates = [item for item in items if item.isAvailable()]
+        in_laundry = [i for i in items if i.inLaundry and not i.deleted]
+
+        if not raw_candidates:
+            if in_laundry:
+                names = ", ".join(f"«{i.type}»" for i in in_laundry[:3])
+                return (
+                    f"Все доступные вещи в стирке ({names}). "
+                    "Заберите хотя бы часть из стирки — тогда получится собрать образ."
+                )
+            return (
+                "В гардеробе нет доступных вещей. Добавьте вещи на странице «Гардероб» — "
+                "или проверьте, не удалены ли они."
+            )
+
+        # 2) Подходят по погоде и сезону?
+        season_temp_candidates = [
+            item for item in raw_candidates
+            if item.minTemperature <= weather.temperature <= item.maxTemperature
+            and (not item.seasons or season in item.seasons)
+        ]
+        if not season_temp_candidates:
+            return (
+                f"Ни одна вещь не подходит под погоду сегодня ({weather.temperature} °C). "
+                "Откройте «Гардероб», выберите вещь и расширьте диапазон температур "
+                "или добавьте её в текущий сезон."
+            )
+
+        # 3) Подходят по поводу?
+        occasion_candidates = [
+            item for item in season_temp_candidates if self._itemFitsOccasion(item, occ)
+        ]
+        if not occasion_candidates:
+            return (
+                f"Для повода «{occ.value}» нет подходящих вещей. Попробуйте другой повод "
+                "или добавьте в «Гардероб» вещи под этот случай."
+            )
+
+        # 4) Не противоречат погоде?
+        weather_candidates = [
+            item for item in occasion_candidates
+            if not self._itemConflictsWeather(item, profile)
+        ]
+        if not weather_candidates:
+            return (
+                "Все подходящие вещи не подходят по погоде (например, сандалии в холод "
+                "или пуховик в тепло). Добавьте вещи, соответствующие сегодняшней погоде."
+            )
+
+        # 4.5) Не хватает чего-то критичного И оно в стирке?
+        parts_avail = Counter(item.part for item in weather_candidates)
+        has_top_a = parts_avail.get(ItemPart.TOP, 0) > 0
+        has_bottom_a = parts_avail.get(ItemPart.BOTTOM, 0) > 0
+        has_shoes_a = parts_avail.get(ItemPart.SHOES, 0) > 0
+        has_one_piece_a = any(self._isOnePiece(i) for i in weather_candidates)
+
+        if in_laundry:
+            laundry_parts = Counter(i.part for i in in_laundry)
+            need_shoes_laundry = not has_shoes_a and laundry_parts.get(ItemPart.SHOES, 0) > 0
+            need_bottom_laundry = (
+                not has_one_piece_a and not has_bottom_a
+                and laundry_parts.get(ItemPart.BOTTOM, 0) > 0
+            )
+            need_top_laundry = (
+                not has_one_piece_a and not has_top_a
+                and laundry_parts.get(ItemPart.TOP, 0) > 0
+            )
+            need_one_piece_laundry = (
+                not has_one_piece_a
+                and not (has_top_a and has_bottom_a)
+                and laundry_parts.get(ItemPart.ONE_PIECE, 0) > 0
+            )
+            if need_shoes_laundry or need_bottom_laundry or need_top_laundry \
+                    or need_one_piece_laundry:
+                names = ", ".join(f"«{i.type}»" for i in in_laundry[:3])
+                return (
+                    f"В стирке {names}. Заберите их из стирки — тогда получится собрать образ."
+                )
+
+        # 5) Хватает ли слагаемых. Полный образ — это
+        #    (верх + низ + обувь) ИЛИ (платье/комбинезон + обувь).
+        if not has_shoes_a:
+            return (
+                "В гардеробе нет подходящей обуви под этот повод и погоду. "
+                "Добавьте обувь на странице «Гардероб»."
+            )
+
+        if not has_one_piece_a and not (has_top_a and has_bottom_a):
+            missing: list[str] = []
+            if not has_top_a:
+                missing.append("верх")
+            if not has_bottom_a:
+                missing.append("низ")
+
+            any_one_piece_ever = any(self._isOnePiece(i) for i in raw_candidates)
+            if not any_one_piece_ever and missing:
+                return (
+                    f"Для образа не хватает: {', '.join(missing)}. "
+                    "Откройте «Гардероб» и добавьте эту вещь. "
+                    "Либо добавьте платье или комбинезон — тогда верх и низ "
+                    "не понадобятся."
+                )
+            if missing:
+                return (
+                    f"Для образа не хватает: {', '.join(missing)}. "
+                    "Откройте «Гардероб» и добавьте эту вещь."
+                )
+
+        # 6) Все слагаемые есть. Перебираем комбинации.
+        tops = [
+            i for i in weather_candidates
+            if i.part == ItemPart.TOP and not self._isOuterwear(i) and not self._isOnePiece(i)
+        ][:6]
+        bottoms = [
+            i for i in weather_candidates
+            if i.part == ItemPart.BOTTOM and not self._isOnePiece(i)
+        ][:6]
+        shoes = [i for i in weather_candidates if i.part == ItemPart.SHOES][:3]
+        outerwear = [i for i in weather_candidates if self._isOuterwear(i)][:3]
+        dresses = [i for i in weather_candidates if self._isOnePiece(i)][:4]
+
+        issues: list[str] = []
+        formal_issue_items: list[Item] = []
+
+        cores: list[tuple[Item, ...]] = [(d,) for d in dresses]
+        cores.extend(product(tops, bottoms))
+
+        for core in cores:
+            for shoe in shoes:
+                base = (*core, shoe)
+                structural = self.check(list(base))
+                if not structural.compatible:
+                    issues.append("color")
+                    continue
+
+                layers = [None, *outerwear] if should_suggest_outerwear(profile) else [None]
+                for layer in layers:
+                    combo = (*base, layer) if layer is not None else base
+                    combo_list = list(combo)
+                    facts = [(i, self._facts(i)) for i in combo_list]
+
+                    formalities = [
+                        f.formality for i, f in facts if i.part != ItemPart.ACCESSORY
+                    ]
+                    if formalities and max(formalities) - min(formalities) > 2:
+                        formal_issue_items = [
+                            i for i, f in facts
+                            if f.formality == min(formalities) and i.part != ItemPart.ACCESSORY
+                        ]
+                        issues.append("style")
+                        continue
+
+                    total_warmth = sum(f.warmth for _, f in facts)
+                    if total_warmth < BAND_RULES[profile.band].absolute_min:
+                        issues.append("cold")
+                        continue
+                    if total_warmth > BAND_RULES[profile.band].max:
+                        issues.append("warm")
+                        continue
+
+                    wc = self._weatherReason(combo_list, profile, occ, strict=False)
+                    if not wc.compatible:
+                        if "формальност" in wc.reason:
+                            issues.append("style")
+                        elif "теплота" in wc.reason and "нужно не меньше" in wc.reason:
+                            issues.append("cold")
+                        elif "теплота" in wc.reason and "не больше" in wc.reason:
+                            issues.append("warm")
+                        elif "акцент" in wc.reason or "цвет" in wc.reason:
+                            issues.append("color")
+                        elif "паттерн" in wc.reason:
+                            issues.append("pattern")
+                        elif "материал" in wc.reason:
+                            issues.append("material")
+                        else:
+                            issues.append("other")
+
+        if not issues:
+            return "Не удалось подобрать образ по неизвестной причине."
+
+        most_common, _ = Counter(issues).most_common(1)[0]
+
+        if most_common == "style":
+            names = ", ".join(f"«{item.type}»" for item in formal_issue_items[:2]) \
+                if formal_issue_items else "некоторые вещи"
+            return (
+                f"Не удалось собрать образ: вещи слишком разные по стилю — "
+                f"спортивные и нарядные вместе. Проверьте {names} в «Гардеробе» и "
+                "измените у них дресс-код на «Casual»."
+            )
+
+        if most_common == "cold":
+            return (
+                f"На {weather.temperature} °C вашего набора вещей не хватает по теплу. "
+                "Добавьте в «Гардероб» более тёплую вещь — свитер из шерсти, куртку, "
+                "пальто или утеплённые штаны."
+            )
+
+        if most_common == "warm":
+            return (
+                f"Для {weather.temperature} °C вещи слишком тёплые. "
+                "Уберите верхнюю одежду или замените свитер/пальто на что-то полегче."
+            )
+
+        if most_common == "color":
+            return (
+                "Не получается собрать образ: в нём слишком много ярких цветов. "
+                "Оставьте один акцентный цвет, остальные выберите нейтральными "
+                "(чёрный, белый, серый, бежевый)."
+            )
+
+        if most_common == "pattern":
+            return (
+                "В образе больше одного крупного принта или узора. "
+                "Оставьте один — остальные вещи сделайте однотонными."
+            )
+
+        if most_common == "material":
+            return (
+                "Не получается сочетать зимние и летние материалы в одном образе. "
+                "Проверьте материалы вещей — например, не смешивайте шерсть и лён."
+            )
+
+        return (
+            "Не удалось подобрать образ. Попробуйте изменить дату, место или повод "
+            "либо добавить больше вещей в «Гардероб»."
+        )
 
     @staticmethod
     def _seasonFor(day: date, latitude: float | None = None) -> Season:

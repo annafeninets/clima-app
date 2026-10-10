@@ -82,7 +82,26 @@ class OutfitController:
     def planOutfit(self, userId: int, filter: OutfitFilter) -> list[Outfit]:
         outfits = self._generate(userId, filter)
         if not outfits:
-            self._raiseIfWardrobeIncomplete(userId)
+            items = self.itemsRepository.findAvailableByUser(userId)
+            user = self.usersRepository.findById(userId)
+            weather = self.weatherService.getForecast(
+                filter.place, filter.date,
+                latitude=filter.latitude, longitude=filter.longitude,
+            )
+            if filter.temperature is not None:
+                weather = WeatherData(
+                    place=weather.place, date=weather.date,
+                    temperature=filter.temperature, conditions=weather.conditions,
+                    feelsLike=filter.temperature, windSpeed=weather.windSpeed,
+                    humidity=weather.humidity, precipitation=weather.precipitation,
+                    uvIndex=weather.uvIndex, latitude=weather.latitude,
+                    longitude=weather.longitude, source=weather.source,
+                )
+            reason = self.rule.explainEmpty(
+                items, weather, filter.occasion,
+                user.preferences if user else None, filter.season,
+            )
+            raise NotEnoughItemsError(reason)
         return outfits
 
     def selectOutfit(self, userId: int, outfitId: int) -> Outfit:
