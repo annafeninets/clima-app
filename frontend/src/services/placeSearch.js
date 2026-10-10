@@ -17,11 +17,11 @@ export async function resolveUserCountry() {
   return countryLookup;
 }
 
-export async function fetchPlaces({ query = "", country = "", seed = "", limit = 10 } = {}) {
+export async function fetchPlaces({ query = "", country = "", seed = "", limit = 10, signal } = {}) {
   const params = new URLSearchParams();
   params.set("q", query);
   if (country) params.set("country", country);
   if (seed) params.set("seed", seed);
   params.set("limit", String(limit));
-  return request(`/places/search?${params.toString()}`);
+  return request(`/places/search?${params.toString()}`, { signal });
 }

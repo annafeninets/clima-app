@@ -113,8 +113,22 @@ def outfit_filter(query: dict[str, str], location: str = "") -> OutfitFilter:
         season = Season(raw_season.upper()) if raw_season else None
     except (AttributeError, ValueError) as error:
         raise ValidationError("Некорректный сезон") from error
+    def _coord(name: str) -> float | None:
+        raw = query.get(name)
+        if raw in (None, ""):
+            return None
+        try:
+            value = float(raw)
+        except (TypeError, ValueError) as error:
+            raise ValidationError(f"Параметр {name} должен быть числом") from error
+        limit = 90 if name == "lat" else 180
+        if not -limit <= value <= limit:
+            raise ValidationError(f"Параметр {name} вне допустимого диапазона")
+        return value
+
     return OutfitFilter(
-        selected_date, place, query.get("occasion", "everyday"), temperature, season
+        selected_date, place, query.get("occasion", "everyday"), temperature, season,
+        _coord("lat"), _coord("lon"),
     )
 
 

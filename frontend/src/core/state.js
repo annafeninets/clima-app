@@ -3,7 +3,8 @@ export const STORAGE_KEYS = {
   login: "clima.login",
   theme: "clima.theme",
   vapid: "clima.vapid",
-  timeZone: "clima.timeZone"
+  timeZone: "clima.timeZone",
+  place: "clima.place",
 };
 
 export const SEASONS = ["WINTER", "SPRING", "SUMMER", "AUTUMN"];
@@ -31,7 +32,9 @@ export const state = {
   profile: {},
   settings: {},
   location: "",
+  selectedPlace: readStoredPlace(),
   planDate: "",
+  planOccasion: "everyday",
   filter: "ALL",
   search: "",
   settingsTab: "profile",
@@ -61,4 +64,25 @@ export function saveSession(token, login) {
   state.login = login;
   localStorage.setItem(STORAGE_KEYS.token, token);
   localStorage.setItem(STORAGE_KEYS.login, login);
+}
+
+function readStoredPlace() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.place);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setPlace(place) {
+  if (!place?.name) return;
+  state.selectedPlace = place;
+  state.location = place.name;
+  try {
+    localStorage.setItem(STORAGE_KEYS.place, JSON.stringify(place));
+    if (place.countryCode) localStorage.setItem("clima.country", place.countryCode);
+  } catch {
+    /* ignore quota */
+  }
 }

@@ -1,7 +1,8 @@
 import { request } from "../core/api.js";
-import { state, STORAGE_KEYS } from "../core/state.js?v=20261008-03";
+import { setPlace, state, STORAGE_KEYS } from "../core/state.js?v=20261008-03";
 import { escapeHTML, showToast } from "../ui/helpers.js";
 import { heading, shell } from "../ui/layout.js";
+import { mountStaticCombobox } from "../utils/autocomplete.js";
 import {
   getCurrentSubscription, isIOSWithoutPWA, isPushSupported, requestNotificationPermission,
   sendSubscriptionToServer, subscribeToPush, unsubscribeFromPush
@@ -93,7 +94,10 @@ export async function renderSettings() {
   const tabs = [["profile", "Профиль и стиль"], ["notifications", "Уведомления"], ["appearance", "Внешний вид"], ["account", "Аккаунт"]];
   let panel = "";
   if (state.settingsTab === "profile") {
-    panel = `<h2>О вас и вашем стиле</h2><p class="page-subtitle">Эти данные помогают выбирать сочетания, которые нравятся именно вам.</p><form id="profile-form" class="form-grid" novalidate>${profileField("location", "Ваш город", state.location, "Например, Санкт-Петербург", true)}${profileField("style", "Стиль", state.profile.style, "Например, casual, минимализм")}${profileField("colors", "Любимые цвета", state.profile.colors, "Например, зелёный, бежевый")}${profileField("sizes", "Размеры", state.profile.sizes, "Например, M, 38")}${profileField("bodyFeatures", "Предпочтительный силуэт", state.profile.bodyFeatures, "Например, прямой, свободный")}<div class="form-errors wide" id="profile-form-errors" role="alert" aria-live="polite"></div><div class="wide"><button class="button" type="submit">Сохранить изменения</button></div></form>`;
+        const locationValue = state.selectedPlace
+          ? `${state.selectedPlace.name}${state.selectedPlace.region ? `, ${state.selectedPlace.region}` : ""}`
+          : state.location;
+        panel = `<h2>О вас и вашем стиле</h2><p class="page-subtitle">Эти данные помогают выбирать сочетания, которые нравятся именно вам.</p><form id="profile-form" class="form-grid" novalidate>${profileField("location", "Город/место", locationValue, "Например, Санкт-Петербург", true)}${profileField("style", "Стиль", state.profile.style, "Например, casual, минимализм")}${profileField("colors", "Любимые цвета", state.profile.colors, "Например, зелёный, бежевый")}${profileField("sizes", "Размеры", state.profile.sizes, "Например, M, 38")}${profileField("bodyFeatures", "Предпочтительный силуэт", state.profile.bodyFeatures, "Например, прямой, свободный")}<div class="form-errors wide" id="profile-form-errors" role="alert" aria-live="polite"></div><div class="wide"><button class="button" type="submit">Сохранить изменения</button></div></form>`;
   } else if (state.settingsTab === "notifications") {
     const detectedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     const savedTimeZone = localStorage.getItem(STORAGE_KEYS.timeZone);
@@ -135,7 +139,7 @@ export async function saveProfile(event, rerender) {
     form.elements.namedItem(name).focus();
     return;
   }
-  const location = values.location;
+  const location = values.location.split(",")[0].trim() || values.location;
   submitButton.disabled = true;
   submitButton.textContent = "Сохранение…";
   try {
@@ -191,6 +195,27 @@ function updateProfileFieldError(form, name, value) {
   const message = profileFieldError(name, value.trim());
   input.setAttribute("aria-invalid", String(Boolean(message)));
   form.querySelector(`#profile-${name}-error`).textContent = message;
+}
+
+export function wireProfileSuggestions(root = document) {
+  for (const [name, options] of Object.entries(PROFILE_SUGGESTIONS)) {
+    const input = root.querySelector(`#profile-${name}`);
+    if (input) mountStaticCombobox(input, options);
+  }
+  const location = root.querySelector("#profile-location");
+  if (location && state.selectedPlace) {
+    location.dataset.lat = state.selectedPlace.lat ?? "";
+    location.dataset.lon = state.selectedPlace.lon ?? "";
+  }
+}
+
+export function bindProfilePlace(place) {
+  const input = document.querySelector("#profile-location");
+  if (!input || !place) return;
+  setPlace(place);
+  input.value = `${place.name}${place.region ? `, ${place.region}` : ""}`;
+  input.dataset.lat = place.lat ?? "";
+  input.dataset.lon = place.lon ?? "";
 }
 
 export function validateProfileFieldInput(input, markTouched = false) {

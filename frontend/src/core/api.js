@@ -11,7 +11,9 @@ export async function request(path, options = {}) {
 
   let response;
   try {
-    response = await fetch(`${state.api.replace(/\/+$/, "")}${path}`, { ...options, headers, body });
+    response = await fetch(`${state.api.replace(/\/+$/, "")}${path}`, {
+      ...options, headers, body, signal: options.signal,
+    });
   } catch {
     throw new Error(`Не удалось подключиться к API ${state.api}. Проверьте, что backend запущен и CORS разрешает адрес frontend.`);
   }

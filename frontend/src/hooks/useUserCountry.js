@@ -1,33 +1,65 @@
-// Hook to determine the user's country code (ISO 3166-1 alpha-2)
-// Priority:
-// 1. Value saved in localStorage (key: 'clima.country') – set when user selects a country in settings or from profile.
-// 2. Detected from browser language/locale (navigator.language, navigator.languages)
-// 3. Fallback to default 'RU' (Russia) if detection fails.
+// Страна пользователя без хардкода списка городов:
+// 1) сохранённая настройка / выбранный город
+// 2) IANA timeZone → ISO-код
+// 3) navigator.language
+// 4) пустая строка → вызывающий код показывает топ мировых городов
+
+const STORAGE_KEY = "clima.country";
+
+const TZ_COUNTRY = {
+  "Europe/Moscow": "RU", "Europe/Kaliningrad": "RU", "Europe/Samara": "RU",
+  "Europe/Volgograd": "RU", "Europe/Saratov": "RU", "Europe/Ulyanovsk": "RU",
+  "Europe/Astrakhan": "RU", "Europe/Kirov": "RU", "Asia/Yekaterinburg": "RU",
+  "Asia/Omsk": "RU", "Asia/Novosibirsk": "RU", "Asia/Barnaul": "RU",
+  "Asia/Tomsk": "RU", "Asia/Novokuznetsk": "RU", "Asia/Krasnoyarsk": "RU",
+  "Asia/Irkutsk": "RU", "Asia/Chita": "RU", "Asia/Yakutsk": "RU",
+  "Asia/Vladivostok": "RU", "Asia/Magadan": "RU", "Asia/Sakhalin": "RU",
+  "Asia/Kamchatka": "RU", "Asia/Anadyr": "RU",
+  "Europe/Minsk": "BY", "Europe/Kiev": "UA", "Europe/Kyiv": "UA",
+  "Europe/London": "GB", "Europe/Paris": "FR", "Europe/Berlin": "DE",
+  "Europe/Madrid": "ES", "Europe/Rome": "IT", "Europe/Amsterdam": "NL",
+  "Europe/Warsaw": "PL", "Europe/Prague": "CZ", "Europe/Vienna": "AT",
+  "Europe/Stockholm": "SE", "Europe/Oslo": "NO", "Europe/Copenhagen": "DK",
+  "Europe/Helsinki": "FI", "Europe/Athens": "GR", "Europe/Istanbul": "TR",
+  "Europe/Lisbon": "PT", "Europe/Brussels": "BE", "Europe/Zurich": "CH",
+  "Europe/Dublin": "IE", "Europe/Bucharest": "RO", "Europe/Budapest": "HU",
+  "Europe/Sofia": "BG", "Europe/Riga": "LV", "Europe/Tallinn": "EE",
+  "Europe/Vilnius": "LT", "Asia/Almaty": "KZ", "Asia/Tbilisi": "GE",
+  "Asia/Yerevan": "AM", "Asia/Baku": "AZ", "Asia/Tashkent": "UZ",
+  "Asia/Tokyo": "JP", "Asia/Shanghai": "CN", "Asia/Hong_Kong": "HK",
+  "Asia/Seoul": "KR", "Asia/Singapore": "SG", "Asia/Bangkok": "TH",
+  "Asia/Dubai": "AE", "Asia/Kolkata": "IN", "Asia/Jerusalem": "IL",
+  "America/New_York": "US", "America/Chicago": "US", "America/Denver": "US",
+  "America/Los_Angeles": "US", "America/Phoenix": "US", "America/Anchorage": "US",
+  "Pacific/Honolulu": "US", "America/Toronto": "CA", "America/Vancouver": "CA",
+  "America/Sao_Paulo": "BR", "America/Mexico_City": "MX",
+  "America/Argentina/Buenos_Aires": "AR", "Australia/Sydney": "AU",
+  "Australia/Melbourne": "AU", "Pacific/Auckland": "NZ",
+  "Africa/Cairo": "EG", "Africa/Johannesburg": "ZA",
+};
 
 let cachedCountryCode = null;
 
-/**
- * Extracts a 2-letter country code from a locale string like 'en-US', 'ru-RU', 'fr-FR'.
- * Returns uppercase code or null if not found.
- */
 function extractCountryFromLocale(locale) {
   if (!locale) return null;
-  // Match patterns like xx-XX or xx_XX or xx (we take the part after separator if it's 2 letters and uppercase)
-  const match = locale.match(/[_-]([A-Z]{2})$/);
-  if (match) return match[1];
-  // Some locales are just language code (like 'en') – we cannot infer country.
+  const match = String(locale).match(/[_-]([A-Za-z]{2})$/);
+  return match ? match[1].toUpperCase() : null;
+}
+
+function countryFromTimeZone() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && TZ_COUNTRY[tz]) return TZ_COUNTRY[tz];
+    if (tz?.startsWith("America/")) return null;
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
-/**
- * Tries to get country from navigator.language or navigator.languages.
- * @returns {string|null}
- */
-function getCountryFromNavigator() {
-  if (typeof navigator === 'undefined') return null;
-  const languages = [];
-  if (navigator.language) languages.push(navigator.language);
-  if (navigator.languages) languages.push(...navigator.languages);
+function countryFromNavigator() {
+  if (typeof navigator === "undefined") return null;
+  const languages = [navigator.language, ...(navigator.languages || [])];
   for (const lang of languages) {
     const code = extractCountryFromLocale(lang);
     if (code) return code;
@@ -35,51 +67,28 @@ function getCountryFromNavigator() {
   return null;
 }
 
-/**
- * Gets country code from localStorage if available.
- * @returns {string|null}
- */
-function getCountryFromStorage() {
-  if (typeof localStorage === 'undefined') return null;
-  return localStorage.getItem('clima.country');
-}
-
-/**
- * Saves country code to localStorage.
- * @param {string} code
- */
 export function setUserCountry(code) {
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('clima.country', code.toUpperCase());
-    cachedCountryCode = code.toUpperCase(); // update cache
+  if (!code) return;
+  cachedCountryCode = code.toUpperCase();
+  try {
+    localStorage.setItem(STORAGE_KEY, cachedCountryCode);
+  } catch {
+    /* ignore */
   }
 }
 
-/**
- * Returns the user's country code (string, e.g., 'RU', 'US', 'FR').
- * Uses cached value if available to avoid repeated work.
- * @returns {string}
- */
 export function useUserCountry() {
-  if (cachedCountryCode !== null) {
-    return cachedCountryCode;
+  if (cachedCountryCode) return cachedCountryCode;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      cachedCountryCode = stored.toUpperCase();
+      return cachedCountryCode;
+    }
+  } catch {
+    /* ignore */
   }
-
-  // 1. Check localStorage
-  const stored = getCountryFromStorage();
-  if (stored) {
-    cachedCountryCode = stored.toUpperCase();
-    return cachedCountryCode;
-  }
-
-  // 2. Try to detect from browser locale
-  const detected = getCountryFromNavigator();
-  if (detected) {
-    cachedCountryCode = detected.toUpperCase();
-    return cachedCountryCode;
-  }
-
-  // 3. Fallback to default
-  cachedCountryCode = 'RU';
+  const detected = countryFromTimeZone() || countryFromNavigator();
+  cachedCountryCode = detected || "";
   return cachedCountryCode;
 }

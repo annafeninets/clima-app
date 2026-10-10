@@ -74,8 +74,14 @@ class OpenWeatherClient:
         self.cache: Cache = cache if cache is not None else MemoryCache()
         self._authWarned = False
 
-    def getForecast(self, place: str, day: date) -> WeatherData:
-        location = self._getLocation(place)
+    def getForecast(
+        self, place: str, day: date,
+        latitude: float | None = None, longitude: float | None = None,
+    ) -> WeatherData:
+        if latitude is not None and longitude is not None:
+            location = {"name": place.strip() or "место", "lat": float(latitude), "lon": float(longitude)}
+        else:
+            location = self._getLocation(place)
         forecast = self._get_json(self.forecastUrl, {
             "lat": location["lat"], "lon": location["lon"],
             "units": "metric", "lang": "ru",
@@ -92,12 +98,35 @@ class OpenWeatherClient:
             temps = [float(slot["main"]["temp"]) for slot in slots]
             temperature = round((min(temps) + max(temps)) / 2)
             conditions = self._pickConditions(slots)
+            feels = [
+                float(slot["main"]["feels_like"])
+                for slot in slots if slot.get("main", {}).get("feels_like") is not None
+            ]
+            winds = [
+                float(slot.get("wind", {}).get("speed") or 0) * 3.6 for slot in slots
+            ]
+            humidity = [
+                int(slot["main"]["humidity"])
+                for slot in slots if slot.get("main", {}).get("humidity") is not None
+            ]
+            rain = 0.0
+            for slot in slots:
+                rain += float((slot.get("rain") or {}).get("3h") or 0)
+                rain += float((slot.get("snow") or {}).get("3h") or 0)
         except OpenWeatherMiss:
             raise
         except (KeyError, IndexError, TypeError, ValueError, AttributeError) as error:
             raise ServiceUnavailableError("Ответ OpenWeather имеет неожиданный формат") from error
         return WeatherData(
             place=location["name"], date=day, temperature=temperature, conditions=conditions,
+            feelsLike=round(sum(feels) / len(feels)) if feels else temperature,
+            windSpeed=max(winds) if winds else 0.0,
+            humidity=round(sum(humidity) / len(humidity)) if humidity else 0,
+            precipitation=rain,
+            uvIndex=0.0,
+            latitude=location["lat"],
+            longitude=location["lon"],
+            source="forecast",
         )
 
     @staticmethod

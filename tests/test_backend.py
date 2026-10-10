@@ -25,7 +25,7 @@ from clima.push_limits import pushCountKey, pushSentKey
 
 
 class FakeWeatherService(WeatherService):
-    def getForecast(self, place: str, date: date) -> WeatherData:
+    def getForecast(self, place: str, date: date, **_kwargs) -> WeatherData:
         return WeatherData(place, date, 18, "ясно")
 
     def getWeather(self, location: str) -> WeatherData:
@@ -440,7 +440,7 @@ class BackendTests(unittest.TestCase):
             temperature = 20
             conditions = "ясно"
 
-            def getForecast(self, place: str, selected_date: date) -> WeatherData:
+            def getForecast(self, place: str, selected_date: date, **_kwargs) -> WeatherData:
                 return WeatherData(place, selected_date, self.temperature, self.conditions)
 
         weather = MutableWeatherService()

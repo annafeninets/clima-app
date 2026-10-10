@@ -51,8 +51,12 @@ class CommandHandler(Handler):
                 userId, outfit_filter(request.query, self.profileController.getLocation(userId))
             ))
         if request.path == "/outfits/today" and request.method == "GET":
+            latitude = _coordinate(request.query, "lat")
+            longitude = _coordinate(request.query, "lon")
+            if latitude is None or longitude is None:
+                latitude = longitude = None
             return Response.ok(self.outfitController.getTodayOutfits(
-                userId, request.query.get("location")
+                userId, request.query.get("location"), latitude, longitude,
             ))
         if request.path == "/outfits/history" and request.method == "GET":
             return Response.ok(self.outfitController.getOutfitHistory(userId))
@@ -87,6 +91,20 @@ class CommandHandler(Handler):
         if command == "/history" and args:
             return Response.ok(self.outfitController.getOutfitHistory(int(args[0])))
         raise ValidationError("Неизвестная команда")
+
+
+def _coordinate(query: dict[str, str], name: str) -> float | None:
+    raw = query.get(name)
+    if raw in (None, ""):
+        return None
+    try:
+        value = float(raw)
+    except (TypeError, ValueError) as error:
+        raise ValidationError(f"Параметр {name} должен быть числом") from error
+    limit = 90 if name == "lat" else 180
+    if not -limit <= value <= limit:
+        raise ValidationError(f"Параметр {name} вне допустимого диапазона")
+    return value
 
 
 def _string(body: dict, key: str) -> str:

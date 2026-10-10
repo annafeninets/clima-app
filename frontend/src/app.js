@@ -304,4 +304,8 @@ window.addEventListener("clima:unauthorized", () => {
   render();
 });
 
+window.addEventListener("clima:place-selected", (event) => {
+  state.selectedPlace = event.detail;
+});
+
 render();

@@ -14,6 +14,7 @@ class Outfit(OwnedEntity):
     items: list[Item] = field(default_factory=list)
     selected: bool = False
     rating: int = 0
+    debug: dict | None = None
 
     def setSelected(self, value: bool) -> None:
         self.selected = value

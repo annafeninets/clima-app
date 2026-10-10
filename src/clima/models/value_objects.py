@@ -69,6 +69,14 @@ class WeatherData:
     date: date
     temperature: int
     conditions: str
+    feelsLike: int | None = None
+    windSpeed: float = 0.0
+    humidity: int = 0
+    precipitation: float = 0.0
+    uvIndex: float = 0.0
+    latitude: float | None = None
+    longitude: float | None = None
+    source: str = "forecast"
 
 
 @dataclass(slots=True)
@@ -84,6 +92,8 @@ class OutfitFilter:
     occasion: str = ""
     temperature: int | None = None
     season: Season | None = None
+    latitude: float | None = None
+    longitude: float | None = None
 
     def __post_init__(self) -> None:
         if isinstance(self.temperature, bool):
