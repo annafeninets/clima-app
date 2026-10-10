@@ -551,5 +551,17 @@ h3 { font-size: 17px; margin-bottom: 6px; }
   .weather-form { grid-template-columns: 1fr; }
   .weather-form .button { grid-column: auto; }
   .topbar-date { font-size: 11px; }
+  .button.active {
+    background: #4d6bfe;
+    color: #ffffff;
+    border-color: #4d6bfe;
+  }
+  .button.active:hover {
+    background: #3a55e0;
+  }
+  .button.active svg {
+    color: #ffffff;
+  }
 }
+
 

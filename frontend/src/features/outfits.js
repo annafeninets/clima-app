@@ -38,9 +38,23 @@ function debugPanel(outfit) {
 export async function outfitCard(outfit, favorite = null, allowSelect = true) {
   const items = outfit.items || [];
   const collage = await OutfitCollage(outfit);
-  const favoriteButton = favorite
-    ? `<button class="button danger small" data-action="remove-favorite" data-id="${favorite.id}">Убрать</button>`
-    : `<button class="button secondary small" data-action="add-favorite" data-id="${outfit.id}">${icon("heart")}Сохранить</button>`;
+
+  // Сердечко — тоггл: сохранён ↔ не сохранён.
+  // Пустое сердечко + «Сохранить» → серое. Полное + «Сохранён» → синее.
+  const isFavorite = Boolean(favorite);
+  const favoriteButton = isFavorite
+    ? `<button class="button small active" data-action="toggle-favorite" data-id="${outfit.id}" data-favorite-id="${favorite.id}" aria-pressed="true" aria-label="Убрать из избранного">${icon("heart-filled")}Сохранён</button>`
+    : `<button class="button secondary small" data-action="toggle-favorite" data-id="${outfit.id}" aria-pressed="false" aria-label="Сохранить в избранное">${icon("heart")}Сохранить</button>`;
+
+  // «Надела» — тоггл: не отмечено ↔ надето.
+  // Крестик + «Надела» → серое. Галочка + «Надето» → синее.
+  const isSelected = Boolean(outfit.selected);
+  const selectButton = allowSelect
+    ? (isSelected
+        ? `<button class="button small active" data-action="toggle-select" data-id="${outfit.id}" data-selected="true" aria-pressed="true" aria-label="Снять отметку">${icon("check")}Надето</button>`
+        : `<button class="button small" data-action="toggle-select" data-id="${outfit.id}" data-selected="false" aria-pressed="false" aria-label="Отметить как надетое">${icon("close")}Не надето</button>`)
+    : "";
+
   const rating =
     outfit.selected && !outfit.rating
       ? `<div class="rating" aria-label="Оценить образ">${[1, 2, 3, 4, 5]
@@ -52,6 +66,7 @@ export async function outfitCard(outfit, favorite = null, allowSelect = true) {
       : outfit.rating
       ? `<span class="badge muted">Оценка ${outfit.rating}/5</span>`
       : "";
+
   const replacements = favorite
     ? (items || [])
         .map((item) => {
@@ -81,7 +96,7 @@ export async function outfitCard(outfit, favorite = null, allowSelect = true) {
       .map((item) => `<span class="chip">${escapeHTML(item.color || "")} ${escapeHTML(item.type || "")}</span>`)
       .join("")}</div>
     ${debugPanel(outfit)}
-    <div class="outfit-actions">${allowSelect && !outfit.selected ? `<button class="button small" data-action="select-outfit" data-id="${outfit.id}">${icon("check")}Надела</button>` : ""}${favoriteButton}${rating}</div>
+    <div class="outfit-actions">${selectButton}${favoriteButton}${rating}</div>
     ${replacements ? `<div>${replacements}</div>` : ""}
     </div></article>`;
 }

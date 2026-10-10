@@ -20,7 +20,6 @@ from clima.integrations.weather import WeatherService
 
 __all__ = ["CompatibilityRule", "OutfitController"]
 
-
 class OutfitController:
     def __init__(
         self,
@@ -107,6 +106,12 @@ class OutfitController:
     def selectOutfit(self, userId: int, outfitId: int) -> Outfit:
         outfit = self.getOutfit(userId, outfitId)
         outfit.setSelected(True)
+        self.outfitsRepository.update(outfit)
+        return outfit
+
+    def unselectOutfit(self, userId: int, outfitId: int) -> Outfit:
+        outfit = self.getOutfit(userId, outfitId)
+        outfit.setSelected(False)
         self.outfitsRepository.update(outfit)
         return outfit
 

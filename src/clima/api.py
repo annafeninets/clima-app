@@ -19,7 +19,6 @@ from clima.models.value_objects import Request, Response
 
 logger = logging.getLogger(__name__)
 
-
 class ClimaApi:
     _routes = (
         (r"/auth/form", "GET", "commandHandler"),
@@ -51,6 +50,7 @@ class ClimaApi:
         (r"/outfits/rate", "GET", "commandHandler"),
         (r"/outfits/\d+/rating", "PUT", "callbackHandler"),
         (r"/outfits/\d+/select", "POST", "commandHandler"),
+        (r"/outfits/\d+/unselect", "POST", "commandHandler"),
         (r"/outfits/\d+", "GET", "commandHandler"),
         (r"/favorites", "GET|POST", "callbackHandler"),
         (r"/favorites/compose", "POST", "callbackHandler"),
@@ -98,7 +98,6 @@ class ClimaApi:
             logger.exception("Unhandled backend error for %s %s", request.method, request.path)
             return Response.error("Внутренняя ошибка сервера", 500, "internal_error")
 
-
 def response_bytes(response: Response) -> tuple[bytes, str]:
     if isinstance(response.data, bytes):
         return response.data, response.contentType
@@ -108,7 +107,6 @@ def response_bytes(response: Response) -> tuple[bytes, str]:
         "data": to_jsonable(response.data),
     }
     return json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode(), response.contentType
-
 
 def to_jsonable(value):
     if isinstance(value, Settings):

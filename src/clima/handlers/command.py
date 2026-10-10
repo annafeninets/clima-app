@@ -7,7 +7,6 @@ from clima.handlers.helpers import client_ip, outfit_filter, preferences_from_da
 from clima.integrations.weather import WeatherService
 from clima.models.value_objects import Request, Response
 
-
 class CommandHandler(Handler):
     def __init__(
         self, authController: AuthController, profileController: ProfileController,
@@ -68,6 +67,8 @@ class CommandHandler(Handler):
                 return Response.ok(self.outfitController.getOutfit(userId, outfitId))
             if request.method == "POST" and request.path.endswith("/select"):
                 return Response.ok(self.outfitController.selectOutfit(userId, outfitId))
+            if request.method == "POST" and request.path.endswith("/unselect"):
+                return Response.ok(self.outfitController.unselectOutfit(userId, outfitId))
         raise ValidationError("Неизвестная команда")
 
     def handleCommand(self, command: str, args: list) -> Response:
@@ -92,7 +93,6 @@ class CommandHandler(Handler):
             return Response.ok(self.outfitController.getOutfitHistory(int(args[0])))
         raise ValidationError("Неизвестная команда")
 
-
 def _coordinate(query: dict[str, str], name: str) -> float | None:
     raw = query.get(name)
     if raw in (None, ""):
@@ -106,13 +106,11 @@ def _coordinate(query: dict[str, str], name: str) -> float | None:
         raise ValidationError(f"Параметр {name} вне допустимого диапазона")
     return value
 
-
 def _string(body: dict, key: str) -> str:
     value = body.get(key)
     if not isinstance(value, str) or not value.strip():
         raise ValidationError(f"Поле {key} обязательно")
     return value
-
 
 def _path_id(path: str, prefix: str) -> int:
     try:

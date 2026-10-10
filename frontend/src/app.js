@@ -11,7 +11,7 @@ import {
   connectPush, handleNotificationToggle, renderSettings, saveNotifications, saveProfile,
   validateProfileFieldInput
 } from "./features/settings.js?v=20261008-07";
-import { showToast } from "./ui/helpers.js";
+import { showToast, icon } from "./ui/helpers.js";
 import { loadingError, shell } from "./ui/layout.js";
 import { initAutocomplete } from "./utils/autocomplete.js";
 
@@ -122,34 +122,70 @@ async function handleAction(element, event) {
       showToast("Статус стирки обновлён");
       return render();
     }
-    if (action === "select-outfit") {
-      // Disable button during request to prevent double-clicks
+
+    // ---------- Тоггл «Надела» ----------
+    // Не отмечено: крестик + «Надела» (серое).
+    // Отмечено: галочка + «Надето» (синее).
+    if (action === "toggle-select") {
+      const outfitId = Number(element.dataset.id);
+      const isSelected = element.dataset.selected === "true";
       element.disabled = true;
-      const originalText = element.innerHTML;
-      element.innerHTML = `${icon("spinner")}Подбираем…`;
       try {
-        await request(`/outfits/${element.dataset.id}/select`, { method: "POST" });
-        showToast("Образ добавлен в историю");
+        const endpoint = isSelected ? "unselect" : "select";
+        await request(`/outfits/${outfitId}/${endpoint}`, { method: "POST" });
+        // Меняем состояние кнопки без перерисовки — чтобы не мигало
+        element.dataset.selected = String(!isSelected);
+        element.setAttribute("aria-pressed", String(!isSelected));
+        element.classList.toggle("active", !isSelected);
+        element.innerHTML = isSelected
+          ? `${icon("close")}Надела`
+          : `${icon("check")}Надето`;
+        showToast(isSelected ? "Отметка снята" : "Отмечено как надетое");
       } catch (error) {
         showToast(error.message, true);
       } finally {
-        if (element.isConnected) {
-          element.disabled = false;
-          element.innerHTML = originalText;
-        }
+        element.disabled = false;
       }
-      return render();
+      return;
     }
-    if (action === "add-favorite") {
-      await request("/favorites", { method: "POST", body: { outfitId: Number(element.dataset.id) } });
-      showToast("Добавлено в избранное");
-      return render();
+
+    // ---------- Тоггл «Сохранить» ----------
+    // Не сохранено: пустое сердце + «Сохранить» (серое).
+    // Сохранено: полное сердце + «Сохранён» (синее).
+    if (action === "toggle-favorite") {
+      const outfitId = Number(element.dataset.id);
+      const favoriteId = element.dataset.favoriteId ? Number(element.dataset.favoriteId) : null;
+      const isFav = element.getAttribute("aria-pressed") === "true";
+      element.disabled = true;
+      try {
+        if (isFav && favoriteId) {
+          await request(`/favorites/${favoriteId}`, { method: "DELETE" });
+          element.setAttribute("aria-pressed", "false");
+          element.classList.remove("active");
+          element.classList.add("secondary");
+          element.innerHTML = `${icon("heart")}Сохранить`;
+          delete element.dataset.favoriteId;
+          showToast("Убрано из избранного");
+        } else {
+          const result = await request("/favorites", {
+            method: "POST",
+            body: { outfitId },
+          });
+          element.setAttribute("aria-pressed", "true");
+          element.classList.add("active");
+          element.classList.remove("secondary");
+          element.innerHTML = `${icon("heart-filled")}Сохранён`;
+          if (result?.favorite?.id) element.dataset.favoriteId = String(result.favorite.id);
+          showToast("Сохранено в избранное");
+        }
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        element.disabled = false;
+      }
+      return;
     }
-    if (action === "remove-favorite") {
-      await request(`/favorites/${element.dataset.id}`, { method: "DELETE" });
-      showToast("Удалено из избранного");
-      return render();
-    }
+
     if (action === "replace-item") {
       const select = document.querySelector(`#replace-${element.dataset.favorite}-${element.dataset.item}`);
       if (!select?.value) throw new Error("Выберите вещь для замены");
@@ -263,7 +299,7 @@ document.addEventListener("input", (event) => {
   if (errors) errors.textContent = "";
   if (itemForm && event.target.name) {
     const fieldError = itemForm.querySelector(`#${event.target.id}-error`);
-    if (!fieldError) {
+        if (!fieldError) {
       event.target.removeAttribute("aria-invalid");
       const nearbyError = event.target.closest(".field")?.querySelector(".field-error");
       if (nearbyError) nearbyError.textContent = "";
