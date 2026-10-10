@@ -1,0 +1,1604 @@
+[
+  {
+    "name": " полиград",
+    "region": "Регион",
+    "country": "FR",
+    "lat": 47.08608817197995,
+    "lon": -11.274224823771078,
+    "timezone": "Europe/Paris",
+    "id": "полиград-fr"
+  },
+  {
+    "name": "East Будапешт",
+    "region": "",
+    "country": "IT",
+    "lat": 47.51671347545047,
+    "lon": 19.391982850439707,
+    "timezone": "Europe/Rome",
+    "id": "eastбудапешт-it"
+  },
+  {
+    "name": "East Вена",
+    "region": "",
+    "country": "ZA",
+    "lat": 48.56198245281204,
+    "lon": 16.772778748768786,
+    "timezone": "Africa/Johannesburg",
+    "id": "eastвена-za"
+  },
+  {
+    "name": "East Екатеринбург",
+    "region": "Свердловская область",
+    "country": "ES",
+    "lat": 57.07350867615904,
+    "lon": 60.19544152627445,
+    "timezone": "Europe/Madrid",
+    "id": "eastекатеринбург-es"
+  },
+  {
+    "name": "East Копенгаген",
+    "region": "",
+    "country": "GB",
+    "lat": 55.751135267501056,
+    "lon": 12.499494805704837,
+    "timezone": "Europe/London",
+    "id": "eastкопенгаген-gb"
+  },
+  {
+    "name": "East Мадрид",
+    "region": "Community of Madrid",
+    "country": "GB",
+    "lat": 39.95865659164304,
+    "lon": -3.420747624370001,
+    "timezone": "Europe/London",
+    "id": "eastмадрид-gb"
+  },
+  {
+    "name": "East Париж",
+    "region": "Île-de-France",
+    "country": "BR",
+    "lat": 48.419549938893475,
+    "lon": 1.865978437004192,
+    "timezone": "America/Manaus",
+    "id": "eastпариж-br"
+  },
+  {
+    "name": "East Пермь",
+    "region": "Пермский край",
+    "country": "DE",
+    "lat": 57.717373304328206,
+    "lon": 56.04466975651451,
+    "timezone": "Europe/Berlin",
+    "id": "eastпермь-de"
+  },
+  {
+    "name": "East Прага",
+    "region": "",
+    "country": "GB",
+    "lat": 49.99325387822061,
+    "lon": 14.096476328713246,
+    "timezone": "Europe/London",
+    "id": "eastпрага-gb"
+  },
+  {
+    "name": "East Рим",
+    "region": "Lazio",
+    "country": "CN",
+    "lat": 42.26560134844983,
+    "lon": 12.572738798662359,
+    "timezone": "Asia/Shanghai",
+    "id": "eastрим-cn"
+  },
+  {
+    "name": "East Санкт-Петербург",
+    "region": "Ленинградская область",
+    "country": "BR",
+    "lat": 59.91588726808765,
+    "lon": 30.075508942085797,
+    "timezone": "America/Sao_Paulo",
+    "id": "eastсанктпетербург-br"
+  },
+  {
+    "name": "North Афины",
+    "region": "",
+    "country": "JP",
+    "lat": 38.129813286883014,
+    "lon": 23.800254518388666,
+    "timezone": "Asia/Tokyo",
+    "id": "northафины-jp"
+  },
+  {
+    "name": "North Будапешт",
+    "region": "",
+    "country": "IT",
+    "lat": 47.2856430031765,
+    "lon": 19.0787132612169,
+    "timezone": "Europe/Rome",
+    "id": "northбудапешт-it"
+  },
+  {
+    "name": "North Вена",
+    "region": "",
+    "country": "AU",
+    "lat": 48.41249454397038,
+    "lon": 16.22171163827365,
+    "timezone": "Australia/Perth",
+    "id": "northвена-au"
+  },
+  {
+    "name": "North Воронеж",
+    "region": "Воронежская область",
+    "country": "JP",
+    "lat": 51.73197688956991,
+    "lon": 38.73893636090555,
+    "timezone": "Asia/Tokyo",
+    "id": "northворонеж-jp"
+  },
+  {
+    "name": "North Краснодар",
+    "region": "Краснодарский край",
+    "country": "IN",
+    "lat": 45.29182413611642,
+    "lon": 38.98459398278289,
+    "timezone": "Asia/Kolkata",
+    "id": "northкраснодар-in"
+  },
+  {
+    "name": "North Мадрид",
+    "region": "Community of Madrid",
+    "country": "US",
+    "lat": 40.756401363996815,
+    "lon": -3.3712693262711726,
+    "timezone": "America/Denver",
+    "id": "northмадрид-us"
+  },
+  {
+    "name": "North Москва",
+    "region": "Московская область",
+    "country": "EG",
+    "lat": 55.681595284558036,
+    "lon": 37.2735554130154,
+    "timezone": "Africa/Cairo",
+    "id": "northмосква-eg"
+  },
+  {
+    "name": "North Осло",
+    "region": "",
+    "country": "BR",
+    "lat": 59.956913960436495,
+    "lon": 10.587843725257835,
+    "timezone": "America/Sao_Paulo",
+    "id": "northосло-br"
+  },
+  {
+    "name": "North Осло",
+    "region": "",
+    "country": "CA",
+    "lat": 60.103928224248456,
+    "lon": 10.618207789495484,
+    "timezone": "America/Toronto",
+    "id": "northосло-ca"
+  },
+  {
+    "name": "North Париж",
+    "region": "Île-de-France",
+    "country": "GB",
+    "lat": 48.46066415458412,
+    "lon": 2.6854589390346435,
+    "timezone": "Europe/London",
+    "id": "northпариж-gb"
+  },
+  {
+    "name": "North Рим",
+    "region": "Lazio",
+    "country": "DE",
+    "lat": 42.28971083359694,
+    "lon": 12.459865024981653,
+    "timezone": "Europe/Berlin",
+    "id": "northрим-de"
+  },
+  {
+    "name": "North Хельсинки",
+    "region": "",
+    "country": "ZA",
+    "lat": 60.07961376010738,
+    "lon": 24.756118339304248,
+    "timezone": "Africa/Johannesburg",
+    "id": "northхельсинки-za"
+  },
+  {
+    "name": "South Афины",
+    "region": "",
+    "country": "GB",
+    "lat": 37.55978308412195,
+    "lon": 23.73065808065531,
+    "timezone": "Europe/London",
+    "id": "southафины-gb"
+  },
+  {
+    "name": "South Воронеж",
+    "region": "Воронежская область",
+    "country": "RU",
+    "lat": 51.21851481453902,
+    "lon": 39.388785688470215,
+    "timezone": "Asia/Novosibirsk",
+    "id": "southворонеж-ru"
+  },
+  {
+    "name": "South Казань",
+    "region": "Татарстан",
+    "country": "GB",
+    "lat": 56.20744753417941,
+    "lon": 48.97781916159941,
+    "timezone": "Europe/London",
+    "id": "southказань-gb"
+  },
+  {
+    "name": "South Красноярск",
+    "region": "Красноярский край",
+    "country": "FR",
+    "lat": 56.2357039034992,
+    "lon": 92.38050572112307,
+    "timezone": "Europe/Paris",
+    "id": "southкрасноярск-fr"
+  },
+  {
+    "name": "South Москва",
+    "region": "Московская область",
+    "country": "IN",
+    "lat": 55.81354486246201,
+    "lon": 37.82917974063152,
+    "timezone": "Asia/Kolkata",
+    "id": "southмосква-in"
+  },
+  {
+    "name": "South Омск",
+    "region": "Омская область",
+    "country": "ES",
+    "lat": 55.30833260654569,
+    "lon": 73.54052347654084,
+    "timezone": "Europe/Madrid",
+    "id": "southомск-es"
+  },
+  {
+    "name": "South Ростов-на-Дону",
+    "region": "Ростовская область",
+    "country": "AU",
+    "lat": 47.42010742488854,
+    "lon": 39.447256913354195,
+    "timezone": "Australia/Perth",
+    "id": "southростовнадону-au"
+  },
+  {
+    "name": "South Самара",
+    "region": "Самарская область",
+    "country": "CA",
+    "lat": 53.24538928300149,
+    "lon": 49.86115702461111,
+    "timezone": "America/Toronto",
+    "id": "southсамара-ca"
+  },
+  {
+    "name": "South Самара",
+    "region": "Самарская область",
+    "country": "FR",
+    "lat": 53.05278993539423,
+    "lon": 50.62896365638022,
+    "timezone": "Europe/Paris",
+    "id": "southсамара-fr"
+  },
+  {
+    "name": "South Стокгольм",
+    "region": "",
+    "country": "ZA",
+    "lat": 59.0669052175821,
+    "lon": 17.649054343617717,
+    "timezone": "Africa/Johannesburg",
+    "id": "southстокгольм-za"
+  },
+  {
+    "name": "West Копенгаген",
+    "region": "",
+    "country": "ES",
+    "lat": 55.47088875218869,
+    "lon": 12.774312683455534,
+    "timezone": "Europe/Madrid",
+    "id": "westкопенгаген-es"
+  },
+  {
+    "name": "West Краснодар",
+    "region": "Краснодарский край",
+    "country": "BR",
+    "lat": 44.89396512202302,
+    "lon": 39.11412129815935,
+    "timezone": "America/Manaus",
+    "id": "westкраснодар-br"
+  },
+  {
+    "name": "West Нижний Новгород",
+    "region": "Нижегородская область",
+    "country": "IT",
+    "lat": 55.9869066671286,
+    "lon": 44.114939015665804,
+    "timezone": "Europe/Rome",
+    "id": "westнижнийновгород-it"
+  },
+  {
+    "name": "West Новосибирск",
+    "region": "Новосибирская область",
+    "country": "DE",
+    "lat": 55.313877298206265,
+    "lon": 82.6292795779402,
+    "timezone": "Europe/Berlin",
+    "id": "westновосибирск-de"
+  },
+  {
+    "name": "West Пермь",
+    "region": "Пермский край",
+    "country": "AU",
+    "lat": 57.7143064025913,
+    "lon": 55.92270657000648,
+    "timezone": "Australia/Perth",
+    "id": "westпермь-au"
+  },
+  {
+    "name": "West Прага",
+    "region": "",
+    "country": "CA",
+    "lat": 50.47260092495415,
+    "lon": 14.202404450023582,
+    "timezone": "America/Vancouver",
+    "id": "westпрага-ca"
+  },
+  {
+    "name": "West Ростов-на-Дону",
+    "region": "Ростовская область",
+    "country": "CN",
+    "lat": 47.17799355705801,
+    "lon": 39.5810512257225,
+    "timezone": "Asia/Urumqi",
+    "id": "westростовнадону-cn"
+  },
+  {
+    "name": "West Санкт-Петербург",
+    "region": "Ленинградская область",
+    "country": "FR",
+    "lat": 60.3271503573989,
+    "lon": 30.61401783127923,
+    "timezone": "Europe/Paris",
+    "id": "westсанктпетербург-fr"
+  },
+  {
+    "name": "West Стамбул",
+    "region": "",
+    "country": "CN",
+    "lat": 40.94454180082053,
+    "lon": 28.84324026200687,
+    "timezone": "Asia/Urumqi",
+    "id": "westстамбул-cn"
+  },
+  {
+    "name": "West Стокгольм",
+    "region": "",
+    "country": "BR",
+    "lat": 59.18730558664379,
+    "lon": 17.747730807069516,
+    "timezone": "America/Sao_Paulo",
+    "id": "westстокгольм-br"
+  },
+  {
+    "name": "West Уфа",
+    "region": "Башкортостан",
+    "country": "GB",
+    "lat": 54.37893167203232,
+    "lon": 55.50493325853873,
+    "timezone": "Europe/London",
+    "id": "westуфа-gb"
+  },
+  {
+    "name": "Амстердам",
+    "region": "Noord-Holland",
+    "country": "NL",
+    "lat": 52.3676,
+    "lon": 4.9041,
+    "timezone": "Europe/Amsterdam",
+    "id": "амстердам-nl"
+  },
+  {
+    "name": "Афины",
+    "region": "",
+    "country": "GR",
+    "lat": 37.9838,
+    "lon": 23.7275,
+    "timezone": "Europe/Athens",
+    "id": "афины-gr"
+  },
+  {
+    "name": "Берлин",
+    "region": "Berlin",
+    "country": "DE",
+    "lat": 52.52,
+    "lon": 13.405,
+    "timezone": "Europe/Berlin",
+    "id": "берлин-de"
+  },
+  {
+    "name": "Берлин",
+    "region": "Berlin",
+    "country": "RU",
+    "lat": 52.476139951241535,
+    "lon": 13.033332638873643,
+    "timezone": "Asia/Omsk",
+    "id": "берлин-ru"
+  },
+  {
+    "name": "Будапешт",
+    "region": "",
+    "country": "HU",
+    "lat": 47.4979,
+    "lon": 19.0402,
+    "timezone": "Europe/Budapest",
+    "id": "будапешт-hu"
+  },
+  {
+    "name": "бургво",
+    "region": "Регион",
+    "country": "AU",
+    "lat": -49.613706613064906,
+    "lon": -129.77135505671467,
+    "timezone": "Australia/Melbourne",
+    "id": "бургво-au"
+  },
+  {
+    "name": "бургград",
+    "region": "Регион",
+    "country": "CN",
+    "lat": -80.2626960965294,
+    "lon": 177.95170010693607,
+    "timezone": "Asia/Urumqi",
+    "id": "бургград-cn"
+  },
+  {
+    "name": "бурглин",
+    "region": "Регион",
+    "country": "EG",
+    "lat": -43.181633726605206,
+    "lon": 2.319681143113314,
+    "timezone": "Africa/Cairo",
+    "id": "бурглин-eg"
+  },
+  {
+    "name": "Варшава",
+    "region": "",
+    "country": "PL",
+    "lat": 52.2297,
+    "lon": 21.0122,
+    "timezone": "Europe/Warsaw",
+    "id": "варшава-pl"
+  },
+  {
+    "name": "Варшава",
+    "region": "",
+    "country": "JP",
+    "lat": 52.21587145231859,
+    "lon": 21.000026022370232,
+    "timezone": "Asia/Tokyo",
+    "id": "варшава-jp"
+  },
+  {
+    "name": "Варшава",
+    "region": "",
+    "country": "ZA",
+    "lat": 52.021065875103474,
+    "lon": 20.9820978343598,
+    "timezone": "Africa/Johannesburg",
+    "id": "варшава-za"
+  },
+  {
+    "name": "Вена",
+    "region": "",
+    "country": "AT",
+    "lat": 48.2082,
+    "lon": 16.3738,
+    "timezone": "Europe/Vienna",
+    "id": "вена-at"
+  },
+  {
+    "name": "ветвет",
+    "region": "Регион",
+    "country": "IT",
+    "lat": -34.82803254099357,
+    "lon": -23.48318898814739,
+    "timezone": "Europe/Rome",
+    "id": "ветвет-it"
+  },
+  {
+    "name": "ветгор",
+    "region": "Регион",
+    "country": "AU",
+    "lat": 42.982111594241246,
+    "lon": 73.25310010834482,
+    "timezone": "Australia/Perth",
+    "id": "ветгор-au"
+  },
+  {
+    "name": "ветдон",
+    "region": "Регион",
+    "country": "DE",
+    "lat": 28.43819519293409,
+    "lon": 143.65303639342244,
+    "timezone": "Europe/Berlin",
+    "id": "ветдон-de"
+  },
+  {
+    "name": "ветка",
+    "region": "Регион",
+    "country": "DE",
+    "lat": 87.98654098420366,
+    "lon": -61.43575706617062,
+    "timezone": "Europe/Berlin",
+    "id": "ветка-de"
+  },
+  {
+    "name": "ветка",
+    "region": "Регион",
+    "country": "BR",
+    "lat": 27.14661495520278,
+    "lon": -148.2499275004238,
+    "timezone": "America/Manaus",
+    "id": "ветка-br"
+  },
+  {
+    "name": "ветно",
+    "region": "Регион",
+    "country": "DE",
+    "lat": -57.15346264476668,
+    "lon": -9.238873555150832,
+    "timezone": "Europe/Berlin",
+    "id": "ветно-de"
+  },
+  {
+    "name": "ветно",
+    "region": "Регион",
+    "country": "CA",
+    "lat": -83.83501180929932,
+    "lon": 30.06067201697101,
+    "timezone": "America/Edmonton",
+    "id": "ветно-ca"
+  },
+  {
+    "name": "вобург",
+    "region": "Регион",
+    "country": "IN",
+    "lat": -83.40955393973954,
+    "lon": 115.00781361199893,
+    "timezone": "Asia/Kolkata",
+    "id": "вобург-in"
+  },
+  {
+    "name": "водон",
+    "region": "Регион",
+    "country": "JP",
+    "lat": 65.46499168658329,
+    "lon": -66.27826060892654,
+    "timezone": "Asia/Tokyo",
+    "id": "водон-jp"
+  },
+  {
+    "name": "Волгоград",
+    "region": "Волгоградская область",
+    "country": "RU",
+    "lat": 48.708,
+    "lon": 44.5133,
+    "timezone": "Europe/Volgograd",
+    "id": "волгоград-ru"
+  },
+  {
+    "name": "волин",
+    "region": "Регион",
+    "country": "FR",
+    "lat": 58.27000930713288,
+    "lon": 41.34463832222548,
+    "timezone": "Europe/Paris",
+    "id": "волин-fr"
+  },
+  {
+    "name": "Воронеж",
+    "region": "Воронежская область",
+    "country": "RU",
+    "lat": 51.672,
+    "lon": 39.2108,
+    "timezone": "Europe/Moscow",
+    "id": "воронеж-ru"
+  },
+  {
+    "name": "востал",
+    "region": "Регион",
+    "country": "JP",
+    "lat": -33.96738884738032,
+    "lon": -160.7113341288633,
+    "timezone": "Asia/Tokyo",
+    "id": "востал-jp"
+  },
+  {
+    "name": "Восточный Амстердам",
+    "region": "Noord-Holland",
+    "country": "FR",
+    "lat": 52.01130925126698,
+    "lon": 4.469308641859515,
+    "timezone": "Europe/Paris",
+    "id": "восточныйамстердам-fr"
+  },
+  {
+    "name": "Восточный Афины",
+    "region": "",
+    "country": "CA",
+    "lat": 37.652689410130755,
+    "lon": 24.14691203351059,
+    "timezone": "America/Edmonton",
+    "id": "восточныйафины-ca"
+  },
+  {
+    "name": "Восточный Волгоград",
+    "region": "Волгоградская область",
+    "country": "DE",
+    "lat": 48.90839385364057,
+    "lon": 44.69703949235716,
+    "timezone": "Europe/Berlin",
+    "id": "восточныйволгоград-de"
+  },
+  {
+    "name": "Восточный Екатеринбург",
+    "region": "Свердловская область",
+    "country": "AU",
+    "lat": 56.71758162348703,
+    "lon": 60.52277122377844,
+    "timezone": "Australia/Sydney",
+    "id": "восточныйекатеринбург-au"
+  },
+  {
+    "name": "Восточный Москва",
+    "region": "Москва",
+    "country": "ZA",
+    "lat": 55.81846058341968,
+    "lon": 38.02930841238684,
+    "timezone": "Africa/Johannesburg",
+    "id": "восточныймосква-za"
+  },
+  {
+    "name": "Восточный Осло",
+    "region": "",
+    "country": "US",
+    "lat": 60.28107816906017,
+    "lon": 11.137488036722203,
+    "timezone": "America/Denver",
+    "id": "восточныйосло-us"
+  },
+  {
+    "name": "Восточный Стамбул",
+    "region": "",
+    "country": "IN",
+    "lat": 40.67275952915959,
+    "lon": 28.65959562925786,
+    "timezone": "Asia/Kolkata",
+    "id": "восточныйстамбул-in"
+  },
+  {
+    "name": "Восточный Хельсинки",
+    "region": "",
+    "country": "FR",
+    "lat": 59.836509763768795,
+    "lon": 24.61281649165186,
+    "timezone": "Europe/Paris",
+    "id": "восточныйхельсинки-fr"
+  },
+  {
+    "name": "гор поли",
+    "region": "Регион",
+    "country": "DE",
+    "lat": 59.2043707966921,
+    "lon": -87.53019064959165,
+    "timezone": "Europe/Berlin",
+    "id": "горполи-de"
+  },
+  {
+    "name": "горбург",
+    "region": "Регион",
+    "country": "RU",
+    "lat": 70.84414556271108,
+    "lon": 80.21216002591729,
+    "timezone": "Asia/Krasnoyarsk",
+    "id": "горбург-ru"
+  },
+  {
+    "name": "горво",
+    "region": "Регион",
+    "country": "DE",
+    "lat": -83.1122656449392,
+    "lon": 36.39635205114536,
+    "timezone": "Europe/Berlin",
+    "id": "горво-de"
+  },
+  {
+    "name": "горлин",
+    "region": "Регион",
+    "country": "JP",
+    "lat": 3.248864927506972,
+    "lon": 35.05840099027597,
+    "timezone": "Asia/Tokyo",
+    "id": "горлин-jp"
+  },
+  {
+    "name": "горстал",
+    "region": "Регион",
+    "country": "EG",
+    "lat": -66.61694343589052,
+    "lon": 71.86179466773112,
+    "timezone": "Africa/Cairo",
+    "id": "горстал-eg"
+  },
+  {
+    "name": "градаво",
+    "region": "Регион",
+    "country": "GB",
+    "lat": 50.05807464293207,
+    "lon": 55.82843718639796,
+    "timezone": "Europe/London",
+    "id": "градаво-gb"
+  },
+  {
+    "name": "градаград",
+    "region": "Регион",
+    "country": "IN",
+    "lat": -83.80264412779293,
+    "lon": -106.63574166384461,
+    "timezone": "Asia/Kolkata",
+    "id": "градаград-in"
+  },
+  {
+    "name": "грададон",
+    "region": "Регион",
+    "country": "FR",
+    "lat": 68.44704014885724,
+    "lon": 48.16843364557346,
+    "timezone": "Europe/Paris",
+    "id": "грададон-fr"
+  },
+  {
+    "name": "градака",
+    "region": "Регион",
+    "country": "FR",
+    "lat": 28.728299094575164,
+    "lon": 132.95599288109133,
+    "timezone": "Europe/Paris",
+    "id": "градака-fr"
+  },
+  {
+    "name": "градгор",
+    "region": "Регион",
+    "country": "CN",
+    "lat": -75.00211906203705,
+    "lon": 124.16012992135887,
+    "timezone": "Asia/Shanghai",
+    "id": "градгор-cn"
+  },
+  {
+    "name": "градка",
+    "region": "Регион",
+    "country": "AU",
+    "lat": -75.43180049479163,
+    "lon": -107.32944463461958,
+    "timezone": "Australia/Melbourne",
+    "id": "градка-au"
+  },
+  {
+    "name": "градстал",
+    "region": "Регион",
+    "country": "AU",
+    "lat": -48.85512352451903,
+    "lon": -176.8668398041934,
+    "timezone": "Australia/Perth",
+    "id": "градстал-au"
+  },
+  {
+    "name": "донбург",
+    "region": "Регион",
+    "country": "ZA",
+    "lat": -85.55695658770249,
+    "lon": 50.96002371940651,
+    "timezone": "Africa/Johannesburg",
+    "id": "донбург-za"
+  },
+  {
+    "name": "донвет",
+    "region": "Регион",
+    "country": "JP",
+    "lat": 76.4735241569202,
+    "lon": 74.96395383674775,
+    "timezone": "Asia/Tokyo",
+    "id": "донвет-jp"
+  },
+  {
+    "name": "донгор",
+    "region": "Регион",
+    "country": "IN",
+    "lat": 2.7980769076183236,
+    "lon": -14.05923828958828,
+    "timezone": "Asia/Kolkata",
+    "id": "донгор-in"
+  },
+  {
+    "name": "донград",
+    "region": "Регион",
+    "country": "CA",
+    "lat": -26.195335992233304,
+    "lon": -139.08060433848243,
+    "timezone": "America/Toronto",
+    "id": "донград-ca"
+  },
+  {
+    "name": "дондон",
+    "region": "Регион",
+    "country": "IN",
+    "lat": -19.677995958853117,
+    "lon": 101.0617105644389,
+    "timezone": "Asia/Kolkata",
+    "id": "дондон-in"
+  },
+  {
+    "name": "донка",
+    "region": "Регион",
+    "country": "ZA",
+    "lat": 32.158699301711025,
+    "lon": -155.0707348189217,
+    "timezone": "Africa/Johannesburg",
+    "id": "донка-za"
+  },
+  {
+    "name": "Екатеринбург",
+    "region": "Свердловская область",
+    "country": "RU",
+    "lat": 56.8389,
+    "lon": 60.6057,
+    "timezone": "Asia/Yekaterinburg",
+    "id": "екатеринбург-ru"
+  },
+  {
+    "name": "Западный Будапешт",
+    "region": "",
+    "country": "AU",
+    "lat": 47.70221636887803,
+    "lon": 19.44781659313821,
+    "timezone": "Australia/Melbourne",
+    "id": "западныйбудапешт-au"
+  },
+  {
+    "name": "Западный Варшава",
+    "region": "",
+    "country": "FR",
+    "lat": 52.18824823170967,
+    "lon": 20.647255336154892,
+    "timezone": "Europe/Paris",
+    "id": "западныйваршава-fr"
+  },
+  {
+    "name": "Западный Красноярск",
+    "region": "Красноярский край",
+    "country": "JP",
+    "lat": 56.205114229747274,
+    "lon": 92.40326248550141,
+    "timezone": "Asia/Tokyo",
+    "id": "западныйкрасноярск-jp"
+  },
+  {
+    "name": "Западный Новосибирск",
+    "region": "Новосибирская область",
+    "country": "ES",
+    "lat": 54.8032464654879,
+    "lon": 82.58823426553444,
+    "timezone": "Europe/Madrid",
+    "id": "западныйновосибирск-es"
+  },
+  {
+    "name": "Западный Омск",
+    "region": "Омская область",
+    "country": "AU",
+    "lat": 54.83818744571805,
+    "lon": 73.34705451667946,
+    "timezone": "Australia/Sydney",
+    "id": "западныйомск-au"
+  },
+  {
+    "name": "Западный Уфа",
+    "region": "Башкортостан",
+    "country": "CN",
+    "lat": 54.684348228158754,
+    "lon": 55.61988633494257,
+    "timezone": "Asia/Urumqi",
+    "id": "западныйуфа-cn"
+  },
+  {
+    "name": "Западный Уфа",
+    "region": "Башкортостан",
+    "country": "ES",
+    "lat": 54.26080316262155,
+    "lon": 55.97345490332931,
+    "timezone": "Europe/Madrid",
+    "id": "западныйуфа-es"
+  },
+  {
+    "name": "кабург",
+    "region": "Регион",
+    "country": "CA",
+    "lat": 44.77854056411476,
+    "lon": 151.70471683164726,
+    "timezone": "America/Toronto",
+    "id": "кабург-ca"
+  },
+  {
+    "name": "каво",
+    "region": "Регион",
+    "country": "DE",
+    "lat": 43.23145382095788,
+    "lon": -53.72409595142352,
+    "timezone": "Europe/Berlin",
+    "id": "каво-de"
+  },
+  {
+    "name": "кагор",
+    "region": "Регион",
+    "country": "ZA",
+    "lat": 82.55554768081848,
+    "lon": -128.3929411070913,
+    "timezone": "Africa/Johannesburg",
+    "id": "кагор-za"
+  },
+  {
+    "name": "кагор",
+    "region": "Регион",
+    "country": "FR",
+    "lat": -8.204707317755435,
+    "lon": -16.30496169304422,
+    "timezone": "Europe/Paris",
+    "id": "кагор-fr"
+  },
+  {
+    "name": "каград",
+    "region": "Регион",
+    "country": "IT",
+    "lat": -7.4557708128761675,
+    "lon": 46.76151013913284,
+    "timezone": "Europe/Rome",
+    "id": "каград-it"
+  },
+  {
+    "name": "каграда",
+    "region": "Регион",
+    "country": "CA",
+    "lat": 22.922591675591704,
+    "lon": -54.93607672111564,
+    "timezone": "America/Vancouver",
+    "id": "каграда-ca"
+  },
+  {
+    "name": "Казань",
+    "region": "Татарстан",
+    "country": "RU",
+    "lat": 55.7887,
+    "lon": 49.1221,
+    "timezone": "Europe/Moscow",
+    "id": "казань-ru"
+  },
+  {
+    "name": "кака",
+    "region": "Регион",
+    "country": "AU",
+    "lat": 27.646144276469713,
+    "lon": 127.50053105758627,
+    "timezone": "Australia/Perth",
+    "id": "кака-au"
+  },
+  {
+    "name": "кастал",
+    "region": "Регион",
+    "country": "AU",
+    "lat": -10.594021287625495,
+    "lon": 175.59422275377483,
+    "timezone": "Australia/Melbourne",
+    "id": "кастал-au"
+  },
+  {
+    "name": "Копенгаген",
+    "region": "",
+    "country": "DK",
+    "lat": 55.6761,
+    "lon": 12.5683,
+    "timezone": "Europe/Copenhagen",
+    "id": "копенгаген-dk"
+  },
+  {
+    "name": "Копенгаген",
+    "region": "",
+    "country": "ES",
+    "lat": 55.903814351459474,
+    "lon": 13.009971346660334,
+    "timezone": "Europe/Madrid",
+    "id": "копенгаген-es"
+  },
+  {
+    "name": "Краснодар",
+    "region": "Краснодарский край",
+    "country": "RU",
+    "lat": 45.0355,
+    "lon": 38.9753,
+    "timezone": "Europe/Moscow",
+    "id": "краснодар-ru"
+  },
+  {
+    "name": "Красноярск",
+    "region": "Красноярский край",
+    "country": "RU",
+    "lat": 56.0184,
+    "lon": 92.8672,
+    "timezone": "Asia/Krasnoyarsk",
+    "id": "красноярск-ru"
+  },
+  {
+    "name": "линбург",
+    "region": "Регион",
+    "country": "US",
+    "lat": -78.40172857469729,
+    "lon": 30.936645148577668,
+    "timezone": "America/Los_Angeles",
+    "id": "линбург-us"
+  },
+  {
+    "name": "линвет",
+    "region": "Регион",
+    "country": "GB",
+    "lat": 27.943077994114674,
+    "lon": -161.3033099394287,
+    "timezone": "Europe/London",
+    "id": "линвет-gb"
+  },
+  {
+    "name": "линград",
+    "region": "Регион",
+    "country": "US",
+    "lat": -26.551950962889855,
+    "lon": 79.88703346688726,
+    "timezone": "America/Chicago",
+    "id": "линград-us"
+  },
+  {
+    "name": "линграда",
+    "region": "Регион",
+    "country": "BR",
+    "lat": 82.69173431187298,
+    "lon": 35.43189889866005,
+    "timezone": "America/Sao_Paulo",
+    "id": "линграда-br"
+  },
+  {
+    "name": "линдон",
+    "region": "Регион",
+    "country": "IN",
+    "lat": 34.822115793644656,
+    "lon": 122.50040193939986,
+    "timezone": "Asia/Kolkata",
+    "id": "линдон-in"
+  },
+  {
+    "name": "Лондон",
+    "region": "Greater London",
+    "country": "GB",
+    "lat": 51.5074,
+    "lon": -0.1278,
+    "timezone": "Europe/London",
+    "id": "лондон-gb"
+  },
+  {
+    "name": "Мадрид",
+    "region": "Community of Madrid",
+    "country": "ES",
+    "lat": 40.4168,
+    "lon": -3.7038,
+    "timezone": "Europe/Madrid",
+    "id": "мадрид-es"
+  },
+  {
+    "name": "Мадрид",
+    "region": "Community of Madrid",
+    "country": "RU",
+    "lat": 40.04039477372029,
+    "lon": -4.137052211043564,
+    "timezone": "Europe/Moscow",
+    "id": "мадрид-ru"
+  },
+  {
+    "name": "Москва",
+    "region": "Москва",
+    "country": "RU",
+    "lat": 55.7558,
+    "lon": 37.6173,
+    "timezone": "Europe/Moscow",
+    "id": "москва-ru"
+  },
+  {
+    "name": "Москва",
+    "region": "Московская область",
+    "country": "RU",
+    "lat": 55.7558,
+    "lon": 37.6173,
+    "timezone": "Europe/Moscow",
+    "id": "москва-ru2"
+  },
+  {
+    "name": "Москва",
+    "region": "Москва",
+    "country": "GB",
+    "lat": 55.762611260699394,
+    "lon": 37.85027529243841,
+    "timezone": "Europe/London",
+    "id": "москва-gb"
+  },
+  {
+    "name": "Москва",
+    "region": "Москва",
+    "country": "ES",
+    "lat": 55.573459527658954,
+    "lon": 37.819933934411225,
+    "timezone": "Europe/Madrid",
+    "id": "москва-es"
+  },
+  {
+    "name": "Нижний Новгород",
+    "region": "Нижегородская область",
+    "country": "RU",
+    "lat": 56.3269,
+    "lon": 44.0075,
+    "timezone": "Europe/Moscow",
+    "id": "нижнийновгород-ru"
+  },
+  {
+    "name": "Новосибирск",
+    "region": "Новосибирская область",
+    "country": "RU",
+    "lat": 55.0084,
+    "lon": 82.9357,
+    "timezone": "Asia/Novosibirsk",
+    "id": "новосибирск-ru"
+  },
+  {
+    "name": "ноград",
+    "region": "Регион",
+    "country": "US",
+    "lat": 87.9233767736383,
+    "lon": -81.93091968608317,
+    "timezone": "America/Los_Angeles",
+    "id": "ноград-us"
+  },
+  {
+    "name": "ноно",
+    "region": "Регион",
+    "country": "RU",
+    "lat": -26.683026765652357,
+    "lon": -16.17364863992026,
+    "timezone": "Asia/Novosibirsk",
+    "id": "ноно-ru"
+  },
+  {
+    "name": "Омск",
+    "region": "Омская область",
+    "country": "RU",
+    "lat": 54.9884,
+    "lon": 73.3242,
+    "timezone": "Asia/Omsk",
+    "id": "омск-ru"
+  },
+  {
+    "name": "Осло",
+    "region": "",
+    "country": "NO",
+    "lat": 59.9139,
+    "lon": 10.7522,
+    "timezone": "Europe/Oslo",
+    "id": "осло-no"
+  },
+  {
+    "name": "Париж",
+    "region": "Île-de-France",
+    "country": "FR",
+    "lat": 48.8566,
+    "lon": 2.3522,
+    "timezone": "Europe/Paris",
+    "id": "париж-fr"
+  },
+  {
+    "name": "Париж",
+    "region": "Île-de-France",
+    "country": "GB",
+    "lat": 48.73281277788097,
+    "lon": 2.7582645443382847,
+    "timezone": "Europe/London",
+    "id": "париж-gb"
+  },
+  {
+    "name": "Пермь",
+    "region": "Пермский край",
+    "country": "RU",
+    "lat": 58.0105,
+    "lon": 56.2502,
+    "timezone": "Europe/Perm",
+    "id": "пермь-ru"
+  },
+  {
+    "name": "Прага",
+    "region": "",
+    "country": "CZ",
+    "lat": 50.0755,
+    "lon": 14.4378,
+    "timezone": "Europe/Prague",
+    "id": "прага-cz"
+  },
+  {
+    "name": "Рим",
+    "region": "Lazio",
+    "country": "IT",
+    "lat": 41.9028,
+    "lon": 12.4964,
+    "timezone": "Europe/Rome",
+    "id": "рим-it"
+  },
+  {
+    "name": "Рим",
+    "region": "Lazio",
+    "country": "ES",
+    "lat": 42.079950020024924,
+    "lon": 12.246877319936583,
+    "timezone": "Europe/Madrid",
+    "id": "рим-es"
+  },
+  {
+    "name": "Ростов-на-Дону",
+    "region": "Ростовская область",
+    "country": "RU",
+    "lat": 47.2357,
+    "lon": 39.7015,
+    "timezone": "Europe/Rostov",
+    "id": "ростовнадону-ru"
+  },
+  {
+    "name": "Самара",
+    "region": "Самарская область",
+    "country": "RU",
+    "lat": 53.2001,
+    "lon": 50.15,
+    "timezone": "Europe/Samara",
+    "id": "самара-ru"
+  },
+  {
+    "name": "Санкт-Петербург",
+    "region": "Ленинградская область",
+    "country": "RU",
+    "lat": 59.9343,
+    "lon": 30.3351,
+    "timezone": "Europe/Moscow",
+    "id": "санктпетербург-ru"
+  },
+  {
+    "name": "Санкт-Петербург",
+    "region": "Ленинградская область",
+    "country": "RU",
+    "lat": 59.693260596221634,
+    "lon": 30.346838822546346,
+    "timezone": "Asia/Krasnoyarsk",
+    "id": "санктпетербург-ru2"
+  },
+  {
+    "name": "Северный Амстердам",
+    "region": "Noord-Holland",
+    "country": "ZA",
+    "lat": 52.524062228124734,
+    "lon": 4.549153572915939,
+    "timezone": "Africa/Johannesburg",
+    "id": "северныйамстердам-za"
+  },
+  {
+    "name": "Северный Амстердам",
+    "region": "Noord-Holland",
+    "country": "RU",
+    "lat": 52.252279549159454,
+    "lon": 4.810497416683082,
+    "timezone": "Asia/Krasnoyarsk",
+    "id": "северныйамстердам-ru"
+  },
+  {
+    "name": "Северный Берлин",
+    "region": "Berlin",
+    "country": "GB",
+    "lat": 53.0026151576404,
+    "lon": 13.66403245792154,
+    "timezone": "Europe/London",
+    "id": "северныйберлин-gb"
+  },
+  {
+    "name": "Северный Вена",
+    "region": "",
+    "country": "CN",
+    "lat": 47.968189008315115,
+    "lon": 15.998081219992255,
+    "timezone": "Asia/Shanghai",
+    "id": "северныйвена-cn"
+  },
+  {
+    "name": "Северный Волгоград",
+    "region": "Волгоградская область",
+    "country": "CN",
+    "lat": 48.89054916201451,
+    "lon": 44.59585795945788,
+    "timezone": "Asia/Shanghai",
+    "id": "северныйволгоград-cn"
+  },
+  {
+    "name": "Северный Краснодар",
+    "region": "Краснодарский край",
+    "country": "BR",
+    "lat": 44.622960167797736,
+    "lon": 38.96569064329023,
+    "timezone": "America/Manaus",
+    "id": "северныйкраснодар-br"
+  },
+  {
+    "name": "Северный Лондон",
+    "region": "Greater London",
+    "country": "CN",
+    "lat": 51.38969784227479,
+    "lon": 0.006811433837955488,
+    "timezone": "Asia/Shanghai",
+    "id": "северныйлондон-cn"
+  },
+  {
+    "name": "Северный Лондон",
+    "region": "Greater London",
+    "country": "IT",
+    "lat": 51.44699241691838,
+    "lon": -0.4799956026071597,
+    "timezone": "Europe/Rome",
+    "id": "северныйлондон-it"
+  },
+  {
+    "name": "Северный Лондон",
+    "region": "Greater London",
+    "country": "DE",
+    "lat": 51.21921055875031,
+    "lon": -0.4689017813474149,
+    "timezone": "Europe/Berlin",
+    "id": "северныйлондон-de"
+  },
+  {
+    "name": "Северный Нижний Новгород",
+    "region": "Нижегородская область",
+    "country": "ES",
+    "lat": 56.596184287003545,
+    "lon": 43.559367845248694,
+    "timezone": "Europe/Madrid",
+    "id": "северныйнижнийновгород-es"
+  },
+  {
+    "name": "Северный Новосибирск",
+    "region": "Новосибирская область",
+    "country": "AU",
+    "lat": 55.320996302160914,
+    "lon": 82.74733613079121,
+    "timezone": "Australia/Perth",
+    "id": "северныйновосибирск-au"
+  },
+  {
+    "name": "Северный Пермь",
+    "region": "Пермский край",
+    "country": "DE",
+    "lat": 57.83866799909054,
+    "lon": 55.7611805916041,
+    "timezone": "Europe/Berlin",
+    "id": "северныйпермь-de"
+  },
+  {
+    "name": "Северный Прага",
+    "region": "",
+    "country": "IN",
+    "lat": 50.19044949125417,
+    "lon": 14.31025771620993,
+    "timezone": "Asia/Kolkata",
+    "id": "северныйпрага-in"
+  },
+  {
+    "name": "Северный Стокгольм",
+    "region": "",
+    "country": "EG",
+    "lat": 58.961513531353624,
+    "lon": 17.577741509284046,
+    "timezone": "Africa/Cairo",
+    "id": "северныйстокгольм-eg"
+  },
+  {
+    "name": "Северный Хельсинки",
+    "region": "",
+    "country": "CN",
+    "lat": 60.558292016969496,
+    "lon": 24.690246280155332,
+    "timezone": "Asia/Shanghai",
+    "id": "северныйхельсинки-cn"
+  },
+  {
+    "name": "сталграда",
+    "region": "Регион",
+    "country": "DE",
+    "lat": 33.20886918723319,
+    "lon": -22.62203562334429,
+    "timezone": "Europe/Berlin",
+    "id": "сталграда-de"
+  },
+  {
+    "name": "сталлин",
+    "region": "Регион",
+    "country": "AU",
+    "lat": 51.298945565267644,
+    "lon": 79.91400519489446,
+    "timezone": "Australia/Sydney",
+    "id": "сталлин-au"
+  },
+  {
+    "name": "Стамбул",
+    "region": "",
+    "country": "TR",
+    "lat": 41.0082,
+    "lon": 28.9674,
+    "timezone": "Europe/Istanbul",
+    "id": "стамбул-tr"
+  },
+  {
+    "name": "Стамбул",
+    "region": "",
+    "country": "ES",
+    "lat": 41.36545615268895,
+    "lon": 28.851949370358444,
+    "timezone": "Europe/Madrid",
+    "id": "стамбул-es"
+  },
+  {
+    "name": "Стокгольм",
+    "region": "",
+    "country": "SE",
+    "lat": 59.3293,
+    "lon": 18.0686,
+    "timezone": "Europe/Stockholm",
+    "id": "стокгольм-se"
+  },
+  {
+    "name": "Уфа",
+    "region": "Башкортостан",
+    "country": "RU",
+    "lat": 54.7351,
+    "lon": 55.9587,
+    "timezone": "Asia/Yekaterinburg",
+    "id": "уфа-ru"
+  },
+  {
+    "name": "Хельсинки",
+    "region": "",
+    "country": "FI",
+    "lat": 60.1699,
+    "lon": 24.9384,
+    "timezone": "Europe/Helsinki",
+    "id": "хельсинки-fi"
+  },
+  {
+    "name": "Южный Берлин",
+    "region": "Berlin",
+    "country": "US",
+    "lat": 52.714832476744945,
+    "lon": 13.064223374411593,
+    "timezone": "Pacific/Honolulu",
+    "id": "южныйберлин-us"
+  },
+  {
+    "name": "Южный Волгоград",
+    "region": "Волгоградская область",
+    "country": "CN",
+    "lat": 48.880683632822226,
+    "lon": 44.93540664380828,
+    "timezone": "Asia/Shanghai",
+    "id": "южныйволгоград-cn"
+  },
+  {
+    "name": "Южный Воронеж",
+    "region": "Воронежская область",
+    "country": "DE",
+    "lat": 51.22176744605128,
+    "lon": 39.675462448036576,
+    "timezone": "Europe/Berlin",
+    "id": "южныйворонеж-de"
+  },
+  {
+    "name": "Южный Екатеринбург",
+    "region": "Свердловская область",
+    "country": "IT",
+    "lat": 57.308610257260625,
+    "lon": 60.886427931744066,
+    "timezone": "Europe/Rome",
+    "id": "южныйекатеринбург-it"
+  },
+  {
+    "name": "Южный Казань",
+    "region": "Татарстан",
+    "country": "DE",
+    "lat": 55.852816686908675,
+    "lon": 49.16350962397993,
+    "timezone": "Europe/Berlin",
+    "id": "южныйказань-de"
+  },
+  {
+    "name": "Южный Казань",
+    "region": "Татарстан",
+    "country": "EG",
+    "lat": 55.95011504533419,
+    "lon": 49.527073579789366,
+    "timezone": "Africa/Cairo",
+    "id": "южныйказань-eg"
+  },
+  {
+    "name": "Южный Красноярск",
+    "region": "Красноярский край",
+    "country": "RU",
+    "lat": 56.27574056016416,
+    "lon": 92.78394571559302,
+    "timezone": "Asia/Yakutsk",
+    "id": "южныйкрасноярск-ru"
+  },
+  {
+    "name": "Южный Москва",
+    "region": "Московская область",
+    "country": "RU",
+    "lat": 55.559280099118574,
+    "lon": 37.41165561338627,
+    "timezone": "Asia/Yakutsk",
+    "id": "южныймосква-ru"
+  },
+  {
+    "name": "Южный Нижний Новгород",
+    "region": "Нижегородская область",
+    "country": "FR",
+    "lat": 56.20730036915289,
+    "lon": 43.543646483393,
+    "timezone": "Europe/Paris",
+    "id": "южныйнижнийновгород-fr"
+  },
+  {
+    "name": "Южный Омск",
+    "region": "Омская область",
+    "country": "ZA",
+    "lat": 54.49444194876364,
+    "lon": 73.19081234050618,
+    "timezone": "Africa/Johannesburg",
+    "id": "южныйомск-za"
+  },
+  {
+    "name": "Южный Ростов-на-Дону",
+    "region": "Ростовская область",
+    "country": "CN",
+    "lat": 47.49328889791865,
+    "lon": 40.0715273072687,
+    "timezone": "Asia/Shanghai",
+    "id": "южныйростовнадону-cn"
+  },
+  {
+    "name": "Южный Самара",
+    "region": "Самарская область",
+    "country": "IT",
+    "lat": 52.75386076761278,
+    "lon": 49.88837069121033,
+    "timezone": "Europe/Rome",
+    "id": "южныйсамара-it"
+  }
+]
