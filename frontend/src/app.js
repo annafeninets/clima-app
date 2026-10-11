@@ -73,6 +73,8 @@ async function render() {
       if (locationInput) initAutocomplete(locationInput, { seed: state.location });
     }
   } catch (error) {
+    // Reset location on error to prevent using stale data
+    state.location = "";
     if (error instanceof ApiError && error.status === 401) {
       clearSession();
       return render();

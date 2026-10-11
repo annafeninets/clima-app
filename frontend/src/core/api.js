@@ -47,13 +47,81 @@ export class ApiError extends Error {
 }
 
 const photoCache = new Map();
+const MAX_PHOTO_CACHE_SIZE = 50; // Limit cache size to prevent memory leaks
 
 export function photoUrl(photo) {
   if (!photo) return Promise.resolve("");
   if (/^data:image\//i.test(photo) || /^blob:/i.test(photo)) return Promise.resolve(photo);
   const path = photo.startsWith("/") ? photo : `/${photo}`;
-  if (!photoCache.has(path)) {
-    photoCache.set(path, request(path).then((blob) => URL.createObjectURL(blob)).catch(() => ""));
+
+  // Check if we have a cached entry
+  const cached = photoCache.get(path);
+  if (cached) {
+    // Update access time for LRU
+    cached.accessTime = Date.now();
+
+    // If we have the blob URL cached, return it immediately
+    if (cached.url !== null) {
+      return Promise.resolve(cached.url);
+    }
+    // If we have a promise pending, return it
+    if (cached.promise !== null) {
+      return cached.promise;
+    }
   }
-  return photoCache.get(path);
+
+  // Create a new promise for this photo
+  let resolvePromise, rejectPromise;
+  const promise = new Promise((resolve, reject) => {
+    resolvePromise = resolve;
+    rejectPromise = reject;
+  });
+
+  // Store the promise in cache (waiting for resolution)
+  const cacheEntry = { url: null, promise, accessTime: Date.now() };
+  photoCache.set(path, cacheEntry);
+
+  // Fetch the photo and create blob URL
+  request(path)
+    .then((blob) => {
+      const blobURL = URL.createObjectURL(blob);
+      // Update cache with the resolved URL
+      const updatedEntry = { url: blobURL, promise: null, accessTime: Date.now() };
+      photoCache.set(path, updatedEntry);
+      resolvePromise(blobURL);
+    })
+    .catch((error) => {
+      // On error, remove from cache and reject promise
+      photoCache.delete(path);
+      rejectPromise(error);
+    });
+
+  // Check if we need to evict old entries to stay within cache size limits
+  if (photoCache.size > MAX_PHOTO_CACHE_SIZE) {
+    // Find the least recently used entry
+    let lruPath = null;
+    let lruTime = Infinity;
+
+    for (const [cachePath, cacheEntry] of photoCache.entries()) {
+      if (cacheEntry.accessTime < lruTime) {
+        lruTime = cacheEntry.accessTime;
+        lruPath = cachePath;
+      }
+    }
+
+    // Remove the LRU entry and revoke its blob URL if it exists
+    if (lruPath !== null) {
+      const lruEntry = photoCache.get(lruPath);
+      if (lruEntry && lruEntry.url !== null) {
+        try {
+          URL.revokeObjectURL(lruEntry.url);
+        } catch (e) {
+          // Ignore errors in revoking (might already be revoked)
+        }
+      }
+      photoCache.delete(lruPath);
+    }
+  }
+
+  return promise;
 }
