@@ -542,10 +542,10 @@ function showItemSaveError(form, error) {
   }
   if (normalized.includes("некорректные характеристики")) {
     form.querySelector("#item-form-errors").textContent =
-      "Сервер не распознал выбранную часть образа. Обновите backend, чтобы применились категории обуви и аксессуаров.";
+      "Проверьте введённые характеристики вещи. Возможно, выбранная комбинация недоступна.";
     form.elements.namedItem("part").setAttribute("aria-invalid", "true");
     form.querySelector("#item-part-error").textContent =
-      "Сервер может не поддерживать выбранную категорию. Перезапустите или обновите backend.";
+      "Пожалуйста, укажите корректные значения для всех полей.";
     return;
   }
   form.querySelector("#item-form-errors").textContent = message;
@@ -686,7 +686,7 @@ export async function saveItem(event) {
       normalizeSuggestion(message).includes("силуэт")
     ) {
       if (errors) errors.textContent =
-        "Backend запущен со старой проверкой. Перезапустите backend и повторите сохранение.";
+        "Для этого типа вещи поле силуэта не требуется. Проверьте введённые данные.";
     } else if (errors) errors.textContent = message;
     return false;
   }
