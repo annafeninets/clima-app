@@ -191,8 +191,7 @@ class Item(OwnedEntity):
                 raise ValidationError(f"Проверьте значение поля «{label}»")
             if label == "силуэт" and value.casefold().replace("ё", "е") not in silhouette_options:
                 raise ValidationError("Силуэт не подходит к выбранному типу вещи")
-        if not self.seasons:
-            raise ValidationError("Укажите хотя бы один сезон")
+        # Сезоны на карточке опциональны: подбор опирается на погоду/тип/тепло, не на это поле.
         if any(not isinstance(season, Season) for season in self.seasons):
             raise ValidationError("Некорректный сезон")
         if (

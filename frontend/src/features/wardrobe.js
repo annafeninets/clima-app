@@ -391,7 +391,7 @@ export function openItemForm(item = {}) {
     ${textField("color")}
     <div class="field"><label for="item-part">Часть образа</label><select id="item-part" name="part" required aria-describedby="item-part-error"><option value="" ${item.part ? "" : "selected"} disabled>Выберите часть образа</option>${Object.entries(PARTS).map(([value, label]) => `<option value="${value}" ${item.part === value ? "selected" : ""}>${label}</option>`).join("")}</select><small class="field-hint">Футболка или свитер — «Верх», куртка, пальто или анорак — «Верхняя одежда».</small><small class="field-error" id="item-part-error" aria-live="polite"></small></div>
     ${textField("dressCode")}
-    <div class="field wide"><span class="field-label">Сезоны</span><div class="season-options">${SEASONS.map((season) => `<label class="season-option"><input type="checkbox" name="seasons" value="${season}" ${checkedSeasons.includes(season) ? "checked" : ""} /><span>${SEASON_LABELS[season]}</span></label>`).join("")}</div></div>
+    <div class="field wide"><span class="field-label">Сезоны <span class="field-hint">(необязательно)</span></span><div class="season-options">${SEASONS.map((season) => `<label class="season-option"><input type="checkbox" name="seasons" value="${season}" ${checkedSeasons.includes(season) ? "checked" : ""} /><span>${SEASON_LABELS[season]}</span></label>`).join("")}</div></div>
     <div class="field"><label for="min-temp">От, °C</label><input id="min-temp" name="minTemperature" type="number" min="-50" max="50" step="1" required value="${item.minTemperature ?? ""}" placeholder="−50…50" /><small class="field-hint">Допустимо от −50 до 50 °C</small></div>
     <div class="field"><label for="max-temp">До, °C</label><input id="max-temp" name="maxTemperature" type="number" min="-50" max="50" step="1" required value="${item.maxTemperature ?? ""}" placeholder="−50…50" /><small class="field-hint">Допустимо от −50 до 50 °C</small></div>
     ${textField("style")}
@@ -627,8 +627,8 @@ export async function saveItem(event) {
     validationError = { message: `Тип вещи «${type}» относится к категории «${expectedPartLabel.toLocaleLowerCase("ru")}». Измените часть образа или укажите другой тип вещи.`, selector: "#item-part" };
   } else if (!Object.hasOwn(PARTS, data.get("part"))) {
     validationError = { message: "Выберите корректную часть образа.", selector: "#item-part" };
-  } else if (!seasons.length || seasons.some((season) => !SEASONS.includes(season))) {
-    validationError = { message: "Выберите хотя бы один корректный сезон.", selector: '[name="seasons"]' };
+  } else if (seasons.some((season) => !SEASONS.includes(season))) {
+    validationError = { message: "Указан некорректный сезон.", selector: '[name="seasons"]' };
   } else if (rawMinimum === "" || !Number.isSafeInteger(minimum)) {
     validationError = { message: "Укажите целую минимальную температуру.", selector: "#min-temp" };
   } else if (rawMaximum === "" || !Number.isSafeInteger(maximum)) {
@@ -666,13 +666,13 @@ export async function saveItem(event) {
       dressCode: textValues.dressCode, style: textValues.style,
       material: textValues.material, silhouette: textValues.silhouette
     };
-    if (!card.seasons.length) throw new Error("Выберите хотя бы один сезон");
     if (card.minTemperature > card.maxTemperature) throw new Error("Минимальная температура выше максимальной");
     if (id) {
       await request(`/wardrobe/items/${id}`, { method: "PUT", body: card });
       if (photo) await request(`/wardrobe/items/${id}/photo`, { method: "PUT", body: { photo } });
       await request(`/wardrobe/items/${id}/laundry`, { method: "PUT", body: { value: data.get("inLaundry") === "true" } });
     } else {
+      // Один запрос: фото (base64) сохраняется только вместе с карточкой — без сиротских файлов.
       await request("/wardrobe/items/draft", { method: "PUT", body: { ...card, photo } });
     }
     document.querySelector("#modal-root").innerHTML = "";

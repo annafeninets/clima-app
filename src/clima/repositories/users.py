@@ -94,6 +94,9 @@ class UsersRepository(Repository[User]):
     def deleteSessionsByUser(self, userId: int) -> None:
         self.db.execute("DELETE FROM sessions WHERE user_id=%s", (userId,))
 
+    def deleteExpiredSessions(self) -> None:
+        self.db.execute("DELETE FROM sessions WHERE expires_at <= NOW()")
+
     @staticmethod
     def _preferences(entity: User) -> dict:
         return {

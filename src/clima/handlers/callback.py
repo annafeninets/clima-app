@@ -38,11 +38,8 @@ class CallbackHandler(Handler):
         if path.startswith("/wardrobe/items/"):
             itemId = _path_id(path, "/wardrobe/items/")
             if path.endswith("/photo") and method == "GET":
-                photo = self.wardrobeController.getItemPhoto(userId, itemId)
-                return Response(
-                    True, data=photo,
-                    contentType=self.wardrobeController.getItemPhotoContentType(userId, itemId),
-                )
+                photo, content_type = self.wardrobeController.getItemPhotoWithType(userId, itemId)
+                return Response(True, data=photo, contentType=content_type)
             if path.endswith("/photo") and method == "PUT":
                 item = self.wardrobeController.updateItemPhoto(
                     userId, itemId, parse_photo(body.get("photo"))

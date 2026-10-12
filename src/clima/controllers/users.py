@@ -81,6 +81,7 @@ class AuthController:
         self.usersRepository.deleteSessionsByUser(userId)
 
     def _newSession(self, user: User) -> Session:
+        self.usersRepository.deleteExpiredSessions()
         expires = datetime.now(timezone.utc) + self.SESSION_TTL
         session = Session(secrets.token_urlsafe(48), user.id, expires)
         self.usersRepository.saveSession(session.token, session.userId, session.expiresAt)

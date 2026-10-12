@@ -39,6 +39,10 @@ CREATE TABLE IF NOT EXISTS items (
     deleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS items_user_id_idx ON items(user_id);
+CREATE INDEX IF NOT EXISTS items_user_available_idx ON items(user_id)
+    WHERE NOT deleted AND NOT in_laundry;
+CREATE INDEX IF NOT EXISTS items_user_active_idx ON items(user_id)
+    WHERE NOT deleted;
 
 CREATE TABLE IF NOT EXISTS outfits (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

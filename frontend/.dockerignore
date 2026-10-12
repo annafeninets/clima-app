@@ -3,3 +3,7 @@ Dockerfile
 package.json
 config.js
 node_modules
+src/data/cities.json
+src/data/generate-cities.js
+src/data/*.csv
+src/components/README.md

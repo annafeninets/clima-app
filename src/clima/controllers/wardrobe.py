@@ -20,12 +20,18 @@ class WardrobeController:
         return self._ownedItem(userId, itemId)
 
     def getItemPhoto(self, userId: int, itemId: int) -> bytes:
-        item = self._ownedItem(userId, itemId)
-        return self.photoStorage.read(item.photo)
+        data, _content_type = self.getItemPhotoWithType(userId, itemId)
+        return data
 
     def getItemPhotoContentType(self, userId: int, itemId: int) -> str:
+        _data, content_type = self.getItemPhotoWithType(userId, itemId)
+        return content_type
+
+    def getItemPhotoWithType(self, userId: int, itemId: int) -> tuple[bytes, str]:
+        """Один lookup вещи: байты фото и Content-Type."""
         item = self._ownedItem(userId, itemId)
-        return mimetypes.guess_type(item.photo)[0] or "application/octet-stream"
+        content_type = mimetypes.guess_type(item.photo)[0] or "application/octet-stream"
+        return self.photoStorage.read(item.photo), content_type
 
     def addItem(self, userId: int, photo: bytes) -> Item:
         return Item(userId=userId, photo=self.photoStorage.save(userId, photo))
