@@ -1,12 +1,12 @@
 import { request } from "../core/api.js";
-import { setPlace, state, STORAGE_KEYS } from "../core/state.js?v=20261008-03";
+import { setPlace, state, STORAGE_KEYS } from "../core/state.js?v=20261012-01";
 import { escapeHTML, showToast } from "../ui/helpers.js";
 import { heading, shell } from "../ui/layout.js";
 import { mountStaticCombobox } from "../utils/autocomplete.js";
 import {
   getCurrentSubscription, isIOSWithoutPWA, isPushSupported, requestNotificationPermission,
   sendSubscriptionToServer, subscribeToPush, unsubscribeFromPush
-} from "./push.js?v=20261008-02";
+} from "./push.js?v=20261012-01";
 
 const FALLBACK_TIME_ZONES = [
   "Europe/Moscow", "Europe/Kaliningrad", "Europe/Samara", "Asia/Yekaterinburg",

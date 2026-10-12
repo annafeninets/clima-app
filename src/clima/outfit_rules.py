@@ -660,8 +660,8 @@ class CompatibilityRule:
             return CheckResult(False, "Для полностью одетого образа нужна обувь")
         facts = [(item, self._facts(item)) for item in available]
         main_colors = {f.color for item, f in facts if item.part != ItemPart.ACCESSORY and f.color}
-        if len(main_colors) > 3:
-            return CheckResult(False, "В образе не больше трёх основных цветов")
+        if len(main_colors) > 5:
+            return CheckResult(False, "В образе не больше пяти основных цветов")
         colors = [f.color for _, f in facts]
         for index, first in enumerate(colors):
             for second in colors[index + 1:]:

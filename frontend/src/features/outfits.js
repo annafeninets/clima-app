@@ -1,8 +1,8 @@
 import { request } from "../core/api.js";
-import { setPlace, state, PARTS } from "../core/state.js?v=20261008-03";
+import { setPlace, state, PARTS } from "../core/state.js?v=20261012-01";
 import { escapeHTML, humanDate, icon, itemCountLabel, showToast, today } from "../ui/helpers.js";
 import { emptyState, heading, shell } from "../ui/layout.js";
-import { OutfitCollage } from "./outfit-collage.js?v=20261008-01";
+import { OutfitCollage } from "./outfit-collage.js?v=20261012-07";
 
 export const OCCASIONS = [
   { value: "everyday", title: "На каждый день" },
@@ -13,11 +13,59 @@ export const OCCASIONS = [
   { value: "formal", title: "Торжественный" },
   { value: "travel", title: "Путешествие" },
   { value: "party", title: "Вечеринка" },
-  { value: "outdoor", title: "Прогулка / outdoor" },
+  { value: "outdoor", title: "Прогулка / outdoor" }
 ];
 
 function occasionLabel(value) {
   return OCCASIONS.find((item) => item.value === value)?.title || value || "";
+}
+
+/**
+ * Нормализует строку для ключа дедупликации:
+ * - приводит к нижнему регистру
+ * - заменяет «ё» на «е»
+ * - отбрасывает всё после слэша (например, «Платье / комбинезон» → «платье»)
+ * - убирает лишние пробелы
+ */
+function normKey(str) {
+  return String(str || "")
+    .toLowerCase()
+    .replaceAll("ё", "е")
+    .replace(/\s*\/\s*.*$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Убирает дубликаты образов по СМЫСЛУ, а не по id.
+ *
+ * Два образа считаются одинаковыми, если у них совпадает набор вещей
+ * по (part + type + color + material). Порядок не важен.
+ */
+function dedupeOutfits(outfits) {
+  if (!Array.isArray(outfits)) return [];
+  const seen = new Set();
+  const unique = [];
+  for (const outfit of outfits) {
+    const items = Array.isArray(outfit?.items) ? outfit.items : [];
+    const keys = items
+      .map((item) => {
+        const part = normKey(item?.part);
+        const type = normKey(item?.type);
+        const color = normKey(item?.color);
+        const material = normKey(item?.material);
+        if (type || color) {
+          return `${part}::${type}::${color}::${material}`;
+        }
+        return `id::${item?.id ?? ""}`;
+      })
+      .sort();
+    const key = keys.join("|") || `empty-${outfit?.id ?? Math.random()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(outfit);
+  }
+  return unique;
 }
 
 function debugPanel(outfit) {
@@ -39,15 +87,11 @@ export async function outfitCard(outfit, favorite = null, allowSelect = true) {
   const items = outfit.items || [];
   const collage = await OutfitCollage(outfit);
 
-  // Сердечко — тоггл: сохранён ↔ не сохранён.
-  // Пустое сердечко + «Сохранить» → серое. Полное + «Сохранён» → синее.
   const isFavorite = Boolean(favorite);
   const favoriteButton = isFavorite
-    ? `<button class="button small active" data-action="toggle-favorite" data-id="${outfit.id}" data-favorite-id="${favorite.id}" aria-pressed="true" aria-label="Убрать из избранного">${icon("heart-filled")}Сохранён</button>`
+    ? `<button class="button small active" data-action="toggle-favorite" data-id="${outfit.id}" data-favorite-id="${favorite.id}" aria-pressed="true" aria-label="Убрать из избранного">${icon("heart")}Сохранён</button>`
     : `<button class="button secondary small" data-action="toggle-favorite" data-id="${outfit.id}" aria-pressed="false" aria-label="Сохранить в избранное">${icon("heart")}Сохранить</button>`;
 
-  // «Надела» — тоггл: не отмечено ↔ надето.
-  // Крестик + «Надела» → серое. Галочка + «Надето» → синее.
   const isSelected = Boolean(outfit.selected);
   const selectButton = allowSelect
     ? (isSelected
@@ -55,73 +99,126 @@ export async function outfitCard(outfit, favorite = null, allowSelect = true) {
         : `<button class="button small" data-action="toggle-select" data-id="${outfit.id}" data-selected="false" aria-pressed="false" aria-label="Отметить как надетое">${icon("close")}Не надето</button>`)
     : "";
 
-  const rating =
-    outfit.selected && !outfit.rating
-      ? `<div class="rating" aria-label="Оценить образ">${[1, 2, 3, 4, 5]
-          .map(
-            (score) =>
-              `<button title="${score}" data-action="rate" data-id="${outfit.id}" data-score="${score}">☆</button>`
-          )
-          .join("")}</div>`
-      : outfit.rating
+  const rating = outfit.selected && !outfit.rating
+    ? `<div class="rating" aria-label="Оценить образ">${[1, 2, 3, 4, 5]
+        .map((score) => `<button title="${score}" data-action="rate" data-id="${outfit.id}" data-score="${score}">${icon("star")}</button>`)
+        .join("")}</div>`
+    : outfit.rating
       ? `<span class="badge muted">Оценка ${outfit.rating}/5</span>`
       : "";
 
   const replacements = favorite
-    ? (items || [])
-        .map((item) => {
-          const choices = state.wardrobe.filter(
-            (candidate) =>
-              candidate.part === item.part &&
-              candidate.id !== item.id &&
-              !candidate.inLaundry &&
-              !candidate.deleted
-          );
-          if (!choices.length) return "";
-          return `<div class="replace-row"><select aria-label="Заменить ${escapeHTML(item.type)}" id="replace-${favorite.id}-${item.id}"><option value="">Заменить ${escapeHTML(item.type)}</option>${choices
-            .map(
-              (choice) =>
-                `<option value="${choice.id}">${escapeHTML(choice.color)} ${escapeHTML(choice.type)}</option>`
-            )
-            .join("")}</select><button class="button secondary small" data-action="replace-item" data-favorite="${favorite.id}" data-item="${item.id}">Ок</button></div>`;
-        })
-        .join("")
+    ? (items || []).map((item) => {
+        const choices = state.wardrobe.filter((candidate) =>
+          candidate.part === item.part &&
+          candidate.id !== item.id &&
+          !candidate.inLaundry &&
+          !candidate.deleted
+        );
+        if (!choices.length) return "";
+        return `<div class="replace-row"><select aria-label="Заменить ${escapeHTML(item.type)}" id="replace-${favorite.id}-${item.id}"><option value="">Заменить ${escapeHTML(item.type)}</option>${choices
+          .map((choice) => `<option value="${choice.id}">${escapeHTML(choice.color)} ${escapeHTML(choice.type)}</option>`)
+          .join("")}</select><button class="button secondary small" data-action="replace-item" data-favorite="${favorite.id}" data-item="${item.id}">Ок</button></div>`;
+      }).join("")
     : "";
 
   return `<article class="card outfit-card">
     ${collage}
-    <div class="outfit-body"><div class="outfit-title"><h3>Образ на ${escapeHTML(humanDate(outfit.date))}</h3>${outfit.selected ? '<span class="badge">Выбран</span>' : ""}</div>
-    <div class="outfit-meta">${escapeHTML(outfit.place || "")}${outfit.occasion ? ` · ${escapeHTML(occasionLabel(outfit.occasion))}` : ""}</div>
-    <div class="item-chips">${items
-      .map((item) => `<span class="chip">${escapeHTML(item.color || "")} ${escapeHTML(item.type || "")}</span>`)
-      .join("")}</div>
-    ${debugPanel(outfit)}
-    <div class="outfit-actions">${selectButton}${favoriteButton}${rating}</div>
-    ${replacements ? `<div>${replacements}</div>` : ""}
-    </div></article>`;
+    <div class="outfit-body">
+      <div class="outfit-title"><h3>Образ на ${escapeHTML(humanDate(outfit.date))}</h3>${outfit.selected ? '<span class="badge">Выбран</span>' : ""}</div>
+      <div class="outfit-meta">${escapeHTML(outfit.place || "")}${outfit.occasion ? ` · ${escapeHTML(occasionLabel(outfit.occasion))}` : ""}</div>
+      <div class="item-chips">${items.map((item) => `<span class="chip">${escapeHTML(item.color || "")} ${escapeHTML(item.type || "")}</span>`).join("")}</div>
+      ${debugPanel(outfit)}
+      <div class="outfit-actions">${selectButton}${favoriteButton}${rating}</div>
+      ${replacements ? `<div>${replacements}</div>` : ""}
+    </div>
+  </article>`;
+}
+
+/* ==========================================================================
+   HERO — «Дама с веером». В правом верхнем углу — компас с розовой стрелкой.
+   ========================================================================== */
+function hero() {
+  return `
+<section class="hero" aria-label="Clima — стиль по погоде">
+  <div class="bg-photo" aria-hidden="true"></div>
+  <div class="bg-overlay" aria-hidden="true"></div>
+  <div class="bg-gradient" aria-hidden="true"></div>
+
+  <div class="hero-badge">Редакция · Clima 2026</div>
+
+  <div class="fan-circle" aria-hidden="true">
+    <svg viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="#800000" stroke-width="1.4"/>
+      <path class="north" d="M12 3 14 10 12 12 10 10Z" fill="none" stroke="#800000" stroke-width="1.4"/>
+      <path d="M12 21 10 14 12 12 14 14Z" fill="none" stroke="#800000" stroke-width="1.4"/>
+      <path d="M3 12 10 10 12 12 10 14Z" fill="none" stroke="#800000" stroke-width="1.4"/>
+      <path d="M21 12 14 14 12 12 14 10Z" fill="none" stroke="#800000" stroke-width="1.4"/>
+    </svg>
+  </div>
+
+  <div class="hero-content-block">
+    <h1>Хороший день <em>начинается</em> с образа</h1>
+    <p>Персональные сочетания из вашего гардероба — с учётом погоды, повода и настроения.</p>
+    <button class="hero-btn" type="button" data-page="plan">Смотреть образ →</button>
+    <div class="hero-caption">Персональный стилист по подбору аутфита по погоде</div>
+  </div>
+
+  <div class="hero-signature" aria-hidden="true">Clima 2026</div>
+</section>
+  `;
 }
 
 export async function renderHome() {
   const available = state.wardrobe.filter((item) => !item.inLaundry && !item.deleted).length;
-  const cards = await Promise.all(state.outfits.slice(0, 3).map((outfit) => outfitCard(outfit)));
-  const content = `<section class="hero"><div class="hero-copy"><div class="hero-tag">${icon("sun")}В гармонии с погодой</div><h1>Хороший день начинается с образа</h1><p>Персональные сочетания из вашего гардероба — с учётом погоды, повода и того, что вам нравится.</p><button class="button" data-page="plan">Подобрать образ ${icon("arrow")}</button></div><div class="hero-art"><div class="sun-disc">${icon("sun")}</div><span class="floating-leaf"></span><span class="floating-leaf two"></span></div></section>
-    <div class="stats-row"><div class="card stat-card"><div class="stat-icon">${icon("hanger")}</div><div><strong>${state.wardrobe.length}</strong><span>в гардеробе</span></div></div><div class="card stat-card"><div class="stat-icon">${icon("sparkle")}</div><div><strong>${available}</strong><span>готовы к выходу</span></div></div><div class="card stat-card"><div class="stat-icon">${icon("heart")}</div><div><strong>${state.favorites.length}</strong><span>в избранном</span></div></div></div>
-    <div class="section-title"><div><h2>На сегодня</h2><p class="page-subtitle">Свежие сочетания под ваш день</p></div><button class="text-link" data-page="plan">Все образы →</button></div>
-    ${state.homeError ? `<div class="card quick-card" style="margin-bottom:16px"><h3>Не удалось получить прогноз</h3><p>${escapeHTML(state.homeError)}</p><button class="button secondary small" data-page="plan">Выбрать место и дату</button></div>` : ""}
+  const uniqueOutfits = dedupeOutfits(state.outfits);
+  const cards = await Promise.all(uniqueOutfits.slice(0, 3).map((outfit) => outfitCard(outfit)));
+  const content = `
+    ${hero()}
+
+    <div class="stats-row">
+      <div class="card stat-card"><div class="stat-icon">${icon("hanger")}</div><div><strong>${state.wardrobe.length}</strong><span>в гардеробе</span></div></div>
+      <div class="card stat-card"><div class="stat-icon">${icon("sparkle")}</div><div><strong>${available}</strong><span>готовы к выходу</span></div></div>
+      <div class="card stat-card"><div class="stat-icon">${icon("heart")}</div><div><strong>${state.favorites.length}</strong><span>в избранном</span></div></div>
+    </div>
+
+    <div class="section-title">
+      <div><h2>На сегодня</h2><p class="page-subtitle">Свежие сочетания под ваш день</p></div>
+      <button class="text-link" data-page="plan" type="button">Все образы →</button>
+    </div>
+
+    ${state.homeError ? `<div class="card quick-card" style="margin-bottom:16px"><h3>Не удалось получить прогноз</h3><p>${escapeHTML(state.homeError)}</p><button class="button secondary small" data-page="plan" type="button">Выбрать место и дату</button></div>` : ""}
+
     ${cards.length ? `<div class="outfit-grid">${cards.join("")}</div>` : emptyState("Пока нет готовых образов", "Добавьте вещи в гардероб и выберите место — Clima подберёт сочетания по прогнозу погоды.", "Начать с гардероба", "go-wardrobe")}
-    <div class="quick-grid" style="margin-top:22px"><div class="card quick-card"><h3>Добавить новую вещь</h3><p>Загрузите фото, укажите цвет и сезон — и вещь появится в вашем цифровом гардеробе.</p><button class="button secondary small" data-action="open-item">${icon("plus")}Добавить вещь</button></div><div class="card quick-card"><h3>Ваш стиль — ваши правила</h3><p>Заполните предпочтения по стилю и цветам, чтобы рекомендации стали ещё персональнее.</p><button class="button secondary small" data-page="settings">Настроить профиль ${icon("arrow")}</button></div></div>`;
+
+    <div class="quick-grid">
+      <div class="card quick-card"><h3>Добавить новую вещь</h3><p>Загрузите фото, укажите цвет и сезон — и вещь появится в вашем цифровом гардеробе.</p><button class="button secondary small" data-action="open-item" type="button">${icon("plus")}Добавить вещь</button></div>
+      <div class="card quick-card"><h3>Ваш стиль — ваши правила</h3><p>Заполните предпочтения по стилю и цветам, чтобы рекомендации стали ещё персональнее.</p><button class="button secondary small" data-page="settings" type="button">Настроить профиль ${icon("arrow")}</button></div>
+    </div>
+  `;
   return shell(content);
 }
 
 export function planForm() {
   const place = state.selectedPlace;
   const occasion = state.planOccasion || "everyday";
-  return `<form id="plan-form" class="card weather-form"><div class="field"><label for="place">Город/место</label><div class="autocomplete"><input id="place" name="place" placeholder="Начните вводить город" value="${escapeHTML(place ? `${place.name}${place.region ? `, ${place.region}` : ""}` : state.location)}" required maxlength="200" autocomplete="off" data-lat="${escapeHTML(place?.lat ?? "")}" data-lon="${escapeHTML(place?.lon ?? "")}" /></div><small class="field-hint">При фокусе — города вашей страны; дальше — поиск по написанию.</small></div><div class="field"><label for="plan-date">Дата</label><input id="plan-date" type="date" name="date" value="${escapeHTML(state.planDate || today())}" required /></div><div class="field"><label for="occasion">Повод</label><select id="occasion" name="occasion">${OCCASIONS.map((o) => `<option value="${o.value}"${o.value === occasion ? " selected" : ""}>${escapeHTML(o.title)}</option>`).join("")}</select></div><button class="button" type="submit">${icon("sparkle")}Подобрать</button></form>`;
+  const placeValue = place
+    ? `${place.name}${place.region ? `, ${place.region}` : ""}`
+    : state.location;
+  return `<form id="plan-form" class="card weather-form">
+    <div class="form-row" style="display:flex; gap:16px; flex-wrap:nowrap; align-items:flex-start;">
+      <div class="field" style="flex:0 0 auto;"><label for="place">Город/место</label><div class="autocomplete"><input id="place" name="place" placeholder="Начните вводить город" value="${escapeHTML(placeValue)}" required maxlength="200" autocomplete="off" data-lat="${escapeHTML(place?.lat ?? "")}" data-lon="${escapeHTML(place?.lon ?? "")}" /></div><small class="field-hint">При фокусе — города вашей страны; дальше — поиск по написанию.</small></div>
+      <div class="field" style="flex:0 0 auto;"><label for="plan-date">Дата</label><input id="plan-date" type="date" name="date" value="${escapeHTML(state.planDate || today())}" required /></div>
+      <div class="field" style="flex:0 0 auto;"><label for="occasion">Повод</label><select id="occasion" name="occasion">${OCCASIONS.map((o) => `<option value="${o.value}"${o.value === occasion ? " selected" : ""}>${escapeHTML(o.title)}</option>`).join("")}</select></div>
+      <button class="button" type="submit" style="margin-top:18px;">${icon("sparkle")}Подобрать</button>
+    </div>
+  </form>`;
 }
 
 export async function renderPlan() {
-  const cards = await Promise.all(state.outfits.map((outfit) => outfitCard(outfit)));
-  return shell(`${heading("Образы по погоде", "Укажите место, дату и повод — подберём до трёх сочетаний из ваших вещей.")}${planForm()}${state.outfits.length ? `<div class="section-title"><div><h2>Ваши сочетания</h2><p class="page-subtitle">Подходящие варианты из вашего гардероба</p></div></div><div class="outfit-grid">${cards.join("")}</div>` : emptyState("Готовы подобрать ваш образ?", "Вещи, сезон и прогноз погоды помогут найти сочетания, в которых будет комфортно.", "", "")}`);
+  const uniqueOutfits = dedupeOutfits(state.outfits);
+  const cards = await Promise.all(uniqueOutfits.map((outfit) => outfitCard(outfit)));
+  return shell(`${heading("Образы по погоде", "Укажите место, дату и повод — подберём до трёх сочетаний из ваших вещей.")}${planForm()}${uniqueOutfits.length ? `<div class="section-title"><div><h2>Ваши сочетания</h2><p class="page-subtitle">Подходящие варианты из вашего гардероба</p></div></div><div class="outfit-grid">${cards.join("")}</div>` : emptyState("Готовы подобрать ваш образ?", "Вещи, сезон и прогноз погоды помогут найти сочетания, в которых будет комфортно.", "", "")}`);
 }
 
 export async function renderFavorites() {
@@ -129,7 +226,7 @@ export async function renderFavorites() {
   const data = await Promise.all(
     state.favorites.map(async (favorite) => ({
       favorite,
-      outfit: await request(`/favorites/${favorite.id}`),
+      outfit: await request(`/favorites/${favorite.id}`)
     }))
   );
   const cards = await Promise.all(
@@ -141,13 +238,13 @@ export async function renderFavorites() {
 export async function renderHistory() {
   state.history = await request("/outfits/history");
   const toRate = await request("/outfits/rate");
-  const cards = await Promise.all(state.history.map((outfit) => outfitCard(outfit, null, false)));
-  const ratingCards = await Promise.all(toRate.map((outfit) => outfitCard(outfit, null, false)));
-  return shell(`${heading("История образов", "Все образы, которые вы выбирали. Оценки помогут персонализировать рекомендации.")}${toRate.length ? `<div class="section-title"><div><h2>Оцените недавнее</h2><p class="page-subtitle">Как вам эти образы?</p></div></div><div class="outfit-grid" style="margin-bottom:30px">${ratingCards.join("")}</div>` : ""}${cards.length ? `<div class="section-title"><div><h2>Выходы</h2><p class="page-subtitle">${itemCountLabel(cards.length)} сохранено в истории</p></div></div><div class="outfit-grid">${cards.join("")}</div>` : emptyState("История пока пуста", "Когда выберете образ, он появится здесь.", "Подобрать образ", "go-plan")}`);
+  const uniqueHistory = dedupeOutfits(state.history);
+  const uniqueToRate = dedupeOutfits(toRate);
+  const cards = await Promise.all(uniqueHistory.map((outfit) => outfitCard(outfit, null, false)));
+  const ratingCards = await Promise.all(uniqueToRate.map((outfit) => outfitCard(outfit, null, false)));
+  return shell(`${heading("История образов", "Все образы, которые вы выбирали. Оценки помогут персонализировать рекомендации.")}${uniqueToRate.length ? `<div class="section-title"><div><h2>Оцените недавнее</h2><p class="page-subtitle">Как вам эти образы?</p></div></div><div class="outfit-grid" style="margin-bottom:30px">${ratingCards.join("")}</div>` : ""}${uniqueHistory.length ? `<div class="section-title"><div><h2>Выходы</h2><p class="page-subtitle">${itemCountLabel(uniqueHistory.length)} сохранено в истории</p></div></div><div class="outfit-grid">${cards.join("")}</div>` : emptyState("История пока пуста", "Когда выберете образ, он появится здесь.", "Подобрать образ", "go-plan")}`);
 }
 
-// Проверяем, что гардероба достаточно для генерации образа.
-// Возвращает true, если можно продолжать, иначе показывает toast и false.
 async function ensureWardrobeReady() {
   if (!state.wardrobe?.length) {
     try {
@@ -162,8 +259,6 @@ async function ensureWardrobeReady() {
     showToast("В гардеробе нет доступных вещей. Добавьте вещи в гардероб.", true);
     return false;
   }
-  // Состав образа проверяет backend (он учитывает платья/комбинезоны и погоду),
-  // клиент блокирует только пустой гардероб.
   return true;
 }
 
@@ -189,15 +284,12 @@ export async function submitPlan(event, rerender) {
   const params = new URLSearchParams({
     place: String(data.get("place")).trim(),
     date: String(data.get("date")),
-    occasion: String(data.get("occasion") || "everyday"),
+    occasion: String(data.get("occasion") || "everyday")
   });
 
-  // Координаты: сначала из выбранного города в автокомплите,
-  // затем — из data-lat/lon самого input.
   let lat = placeInput?.dataset.lat || "";
   let lon = placeInput?.dataset.lon || "";
   if (!(lat && lon)) {
-    // Город набран вручную, подсказка не выбрана — берём первое совпадение поиска.
     try {
       const found = await request(`/places/search?q=${encodeURIComponent(params.get("place"))}&limit=1`);
       const list = Array.isArray(found) ? found : found?.suggestions || found?.places || found?.items || [];
@@ -205,13 +297,11 @@ export async function submitPlan(event, rerender) {
       if (first?.name && first.lat != null && first.lon != null) {
         setPlace(first);
         bindPlanPlace(first);
-        params.set("place", formatLoose(first));
+        params.set("place", `${first.name}${first.region ? `, ${first.region}` : ""}`);
         lat = String(first.lat);
         lon = String(first.lon);
       }
-    } catch {
-      /* без координат backend сам попробует найти город */
-    }
+    } catch { /* без координат */ }
   }
   if (lat && lon) {
     params.set("lat", lat);
@@ -230,30 +320,15 @@ export async function submitPlan(event, rerender) {
     state.outfits = await request(`/outfits/plan?${params.toString()}`);
 
     if (state.outfits.length === 0) {
-      showToast(
-        `Для выбранной даты ${params.get("date")} и места ${picked} не удалось подобрать образ. Проверьте, пожалуйста, ваш гардероб на наличие подходящей одежды и попробуйте изменить дату или место.`
-      );
+      showToast(`Для выбранной даты ${params.get("date")} и места ${picked} не удалось подобрать образ. Проверьте гардероб и попробуйте изменить дату или место.`);
     } else {
       showToast(`Подобрали образов: ${state.outfits.length}`);
     }
     await rerender();
   } catch (error) {
-    // Не оставляем на экране образы прошлого запроса — они относятся к другому городу/дате.
     state.outfits = [];
     try { await rerender(); } catch { /* ignore */ }
-    const errorMessage = String(error?.message || "").toLowerCase();
-    if (
-      errorMessage.includes("weather") ||
-      errorMessage.includes("forecast") ||
-      errorMessage.includes("погод") ||
-      errorMessage.includes("прогност")
-    ) {
-      showToast(
-        "Не удалось получить прогноз погоды для выбранной даты и места. Пожалуйста, проверьте правильность введённого места и попробуйте другую дату."
-      );
-    } else {
-      showToast(error.message, true);
-    }
+    showToast(String(error?.message || "Неизвестная ошибка"));
   } finally {
     if (form.isConnected) {
       delete form.dataset.submitting;
@@ -268,10 +343,7 @@ export async function composeOutfit() {
 
   const eligible = state.wardrobe.filter((item) => !item.inLaundry && !item.deleted);
   const options = eligible
-    .map(
-      (item) =>
-        `<label class="season-option"><input type="checkbox" name="compose-item" value="${item.id}" /><span>${escapeHTML(item.color)} ${escapeHTML(item.type)} · ${escapeHTML(PARTS[item.part] || "")}</span></label>`
-    )
+    .map((item) => `<label class="season-option"><input type="checkbox" name="compose-item" value="${item.id}" /><span>${escapeHTML(item.color)} ${escapeHTML(item.type)} · ${escapeHTML(PARTS[item.part] || "")}</span></label>`)
     .join("");
   const root = document.querySelector("#modal-root");
   if (!root) {
@@ -296,9 +368,7 @@ export function bindPlanPlace(place) {
 
 export async function saveComposedOutfit(event, rerender) {
   event.preventDefault();
-  const itemIds = [...event.target.querySelectorAll('input[name="compose-item"]:checked')].map(
-    (input) => Number(input.value)
-  );
+  const itemIds = [...event.target.querySelectorAll('input[name="compose-item"]:checked')].map((input) => Number(input.value));
   try {
     const result = await request("/favorites/compose", { method: "POST", body: { itemIds } });
     document.querySelector("#modal-root").innerHTML = "";

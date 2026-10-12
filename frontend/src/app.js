@@ -1,23 +1,30 @@
 import { ApiError, request } from "./core/api.js";
-import { state, clearSession, STORAGE_KEYS } from "./core/state.js?v=20261008-03";
-import { renderAuth, submitAuth, toggleAuthMode, logout } from "./features/auth.js?v=20261008-01";
+import { state, clearSession, STORAGE_KEYS } from "./core/state.js?v=20261012-01";
+import { renderAuth, submitAuth, toggleAuthMode, logout } from "./features/auth.js?v=20261012-01";
 import {
-  composeOutfit, renderFavorites, renderHistory, renderHome, renderPlan, saveComposedOutfit, submitPlan
-} from "./features/outfits.js?v=20261008-05";
+  composeOutfit, renderFavorites, renderHistory, renderHome, renderPlan,
+  saveComposedOutfit, submitPlan
+} from "./features/outfits.js?v=20261012-09";
 import {
   changeLaundry, deleteItem, openItemForm, renderWardrobe
-} from "./features/wardrobe.js?v=20261008-02";
+} from "./features/wardrobe.js?v=20261012-01";
 import {
   connectPush, handleNotificationToggle, renderSettings, saveNotifications, saveProfile,
   validateProfileFieldInput
-} from "./features/settings.js?v=20261008-07";
+} from "./features/settings.js?v=20261012-01";
 import { showToast, icon } from "./ui/helpers.js";
 import { loadingError, shell } from "./ui/layout.js";
-import { initAutocomplete } from "./utils/autocomplete.js";
+import { initAutocomplete } from "./utils/autocomplete.js?v=20261012-01";
 
 const app = document.querySelector("#app");
 
+if (!app) {
+  throw new Error("Не найден корневой контейнер #app");
+}
+
 function mountAuth() {
+  // Экран входа показывается только когда нет токена.
+  // В обычном интерфейсе пункта «Вход» нет — он вне app-shell.
   app.innerHTML = renderAuth();
   app.querySelector("#auth-form")?.addEventListener("submit", (event) => submitAuth(event, render));
   app.querySelector('[data-action="toggle-auth"]')?.addEventListener("click", () => {
@@ -28,6 +35,7 @@ function mountAuth() {
 
 async function render() {
   document.documentElement.dataset.theme = state.theme;
+
   if (!state.token) {
     mountAuth();
     return;
@@ -35,13 +43,16 @@ async function render() {
 
   app.innerHTML = `<div class="loading"><span class="spinner"></span></div>`;
   try {
-    state.location = (await request("/profile/location"))?.location || "";
-    if (["home", "wardrobe", "favorites"].includes(state.page)) {
+    const locationResponse = await request("/profile/location");
+    state.location = locationResponse?.location || "";
+
+    if (["home", "wardrobe", "favorites", "plan"].includes(state.page)) {
       state.wardrobe = await request("/wardrobe");
     }
     if (["wardrobe", "settings"].includes(state.page)) {
       state.wardrobeStatus = await request("/wardrobe/status");
     }
+
     if (state.page === "home") {
       state.homeError = "";
       if (state.location) {
@@ -60,21 +71,22 @@ async function render() {
       app.innerHTML = await renderHome();
     } else if (state.page === "plan") {
       app.innerHTML = await renderPlan();
-      const placeInput = app.querySelector('#place');
+      const placeInput = app.querySelector("#place");
       if (placeInput) initAutocomplete(placeInput, { seed: state.location });
-    } else if (state.page === "wardrobe") app.innerHTML = await renderWardrobe();
-    else if (state.page === "favorites") app.innerHTML = await renderFavorites();
-    else if (state.page === "history") app.innerHTML = await renderHistory();
-    else if (state.page === "settings") {
+    } else if (state.page === "wardrobe") {
+      app.innerHTML = await renderWardrobe();
+    } else if (state.page === "favorites") {
+      app.innerHTML = await renderFavorites();
+    } else if (state.page === "history") {
+      app.innerHTML = await renderHistory();
+    } else if (state.page === "settings") {
       app.innerHTML = await renderSettings();
       app.querySelector("#profile-form")?.addEventListener("submit", (event) => saveProfile(event, render));
       app.querySelector("#notification-form")?.addEventListener("submit", (event) => saveNotifications(event, render));
-      const locationInput = app.querySelector('#profile-location');
+      const locationInput = app.querySelector("#profile-location");
       if (locationInput) initAutocomplete(locationInput, { seed: state.location });
     }
   } catch (error) {
-    // Reset location on error to prevent using stale data
-    state.location = "";
     if (error instanceof ApiError && error.status === 401) {
       clearSession();
       return render();
@@ -111,7 +123,9 @@ async function handleAction(element, event) {
       document.querySelector("#modal-root").innerHTML = "";
       return;
     }
-    if (action === "edit-item") return openItemForm(await request(`/wardrobe/items/${element.dataset.id}`));
+    if (action === "edit-item") {
+      return openItemForm(await request(`/wardrobe/items/${element.dataset.id}`));
+    }
     if (action === "delete-item") {
       if (!window.confirm("Удалить вещь из гардероба?")) return;
       await deleteItem(element.dataset.id);
@@ -125,9 +139,6 @@ async function handleAction(element, event) {
       return render();
     }
 
-    // ---------- Тоггл «Надела» ----------
-    // Не отмечено: крестик + «Надела» (серое).
-    // Отмечено: галочка + «Надето» (синее).
     if (action === "toggle-select") {
       const outfitId = Number(element.dataset.id);
       const isSelected = element.dataset.selected === "true";
@@ -135,13 +146,10 @@ async function handleAction(element, event) {
       try {
         const endpoint = isSelected ? "unselect" : "select";
         await request(`/outfits/${outfitId}/${endpoint}`, { method: "POST" });
-        // Меняем состояние кнопки без перерисовки — чтобы не мигало
         element.dataset.selected = String(!isSelected);
         element.setAttribute("aria-pressed", String(!isSelected));
         element.classList.toggle("active", !isSelected);
-        element.innerHTML = isSelected
-          ? `${icon("close")}Надела`
-          : `${icon("check")}Надето`;
+        element.innerHTML = isSelected ? `${icon("close")}Не надето` : `${icon("check")}Надето`;
         showToast(isSelected ? "Отметка снята" : "Отмечено как надетое");
       } catch (error) {
         showToast(error.message, true);
@@ -151,9 +159,6 @@ async function handleAction(element, event) {
       return;
     }
 
-    // ---------- Тоггл «Сохранить» ----------
-    // Не сохранено: пустое сердце + «Сохранить» (серое).
-    // Сохранено: полное сердце + «Сохранён» (синее).
     if (action === "toggle-favorite") {
       const outfitId = Number(element.dataset.id);
       const favoriteId = element.dataset.favoriteId ? Number(element.dataset.favoriteId) : null;
@@ -169,10 +174,7 @@ async function handleAction(element, event) {
           delete element.dataset.favoriteId;
           showToast("Убрано из избранного");
         } else {
-          const result = await request("/favorites", {
-            method: "POST",
-            body: { outfitId },
-          });
+          const result = await request("/favorites", { method: "POST", body: { outfitId } });
           element.setAttribute("aria-pressed", "true");
           element.classList.add("active");
           element.classList.remove("secondary");
@@ -221,8 +223,11 @@ async function handleAction(element, event) {
 }
 
 document.addEventListener("click", async (event) => {
-  const target = event.target instanceof Element ? event.target.closest("[data-page], [data-action], [data-filter], [data-settings-tab], [data-theme-set], .theme-toggle, .logout, .mobile-logout") : null;
+  const target = event.target instanceof Element
+    ? event.target.closest("[data-page], [data-action], [data-filter], [data-settings-tab], [data-theme-set], .theme-toggle, .logout")
+    : null;
   if (!target) return;
+
   if (target.matches("[data-page]")) {
     state.page = target.dataset.page;
     state.search = "";
@@ -250,7 +255,7 @@ document.addEventListener("click", async (event) => {
       localStorage.setItem(STORAGE_KEYS.theme, theme);
       await render();
     } catch (error) { showToast(error.message, true); }
-  } else if (target.matches(".logout, .mobile-logout")) {
+  } else if (target.matches(".logout")) {
     await logout();
     clearSession();
     await render();
@@ -263,8 +268,10 @@ document.addEventListener("input", async (event) => {
     const position = event.target.selectionStart;
     app.innerHTML = await renderWardrobe();
     const input = app.querySelector("#wardrobe-search");
-    input.focus();
-    input.setSelectionRange(position, position);
+    if (input) {
+      input.focus();
+      input.setSelectionRange(position, position);
+    }
   }
 });
 
@@ -274,7 +281,7 @@ document.addEventListener("change", (event) => {
     return;
   }
   if (event.target.id === "item-photo") {
-    const file = event.target.files[0];
+    const file = event.target.files?.[0];
     const label = document.querySelector("#file-label");
     if (label) label.textContent = file ? file.name : "Загрузить фото";
     event.target.closest(".file-drop")?.classList.remove("invalid");
@@ -294,14 +301,17 @@ document.addEventListener("change", (event) => {
 document.addEventListener("input", (event) => {
   validateProfileFieldInput(event.target);
   const itemForm = event.target.closest("#item-form");
-  const formSelector = itemForm ? "#item-form-errors"
-    : event.target.closest("#profile-form") ? "#profile-form-errors" : "";
+  const formSelector = itemForm
+    ? "#item-form-errors"
+    : event.target.closest("#profile-form")
+      ? "#profile-form-errors"
+      : "";
   if (!formSelector) return;
   const errors = document.querySelector(formSelector);
   if (errors) errors.textContent = "";
   if (itemForm && event.target.name) {
     const fieldError = itemForm.querySelector(`#${event.target.id}-error`);
-        if (!fieldError) {
+    if (!fieldError) {
       event.target.removeAttribute("aria-invalid");
       const nearbyError = event.target.closest(".field")?.querySelector(".field-error");
       if (nearbyError) nearbyError.textContent = "";

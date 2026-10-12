@@ -1,5 +1,5 @@
 import { request, photoUrl } from "../core/api.js";
-import { state, PARTS, SEASONS, SEASON_LABELS } from "../core/state.js?v=20261008-03";
+import { state, PARTS, SEASONS, SEASON_LABELS } from "../core/state.js?v=20261012-01";
 import { escapeHTML, fileAsDataUrl, icon, itemCountLabel, showToast } from "../ui/helpers.js";
 import { emptyState, heading, shell } from "../ui/layout.js";
 
@@ -71,28 +71,18 @@ const ITEM_TEXT_FIELDS = [
 ];
 
 const WARDROBE_HINT_LABELS = {
-  top: "верх",
-  outerwear: "верхнюю одежду",
-  bottom: "низ",
-  shoes: "обувь",
-  bag: "сумку",
-  hat: "головной убор",
-  accessories: "аксессуары"
+  top: "верх", outerwear: "верхнюю одежду", bottom: "низ", shoes: "обувь",
+  bag: "сумку", hat: "головной убор", accessories: "аксессуары"
 };
 const WARDROBE_HINT_TITLES = {
-  top: "Верх",
-  outerwear: "Верхняя одежда",
-  bottom: "Низ",
-  shoes: "Обувь",
-  bag: "Сумка",
-  hat: "Головной убор",
-  accessories: "Аксессуары"
+  top: "Верх", outerwear: "Верхняя одежда", bottom: "Низ", shoes: "Обувь",
+  bag: "Сумка", hat: "Головной убор", accessories: "Аксессуары"
 };
 
 const TOP_TYPE_MARKERS = [
   "футболк", "поло", "лонгслив", "майк", "топ", "рубаш", "блуз", "туник", "корсет",
   "боди", "кофт", "свитер", "худи", "кардиган", "жилет", "свитшот", "толстовк", "джемпер",
-  "пуловер", "водолазк", "футбол", "blouse", "sweater", "hoodie"
+  "пуловер", "водолазк", "blouse", "sweater", "hoodie"
 ];
 const OUTERWEAR_TYPE_MARKERS = [
   "куртк", "пальто", "плащ", "пиджак", "жакет", "блейзер", "парка", "ветровк",
@@ -102,47 +92,20 @@ const OUTERWEAR_TYPE_MARKERS = [
 ];
 const BOTTOM_TYPE_MARKERS = [
   "джинс", "брюк", "штан", "юбк", "шорт", "бермуд", "леггинс", "лосин", "капри",
-  "кроссов", "кед", "ботин", "ботильон", "сапог", "туфл", "лофер", "мокасин",
-  "балет", "сандал", "босонож", "шлеп", "мюл", "угг", "jean", "trouser", "pants",
-  "skirt", "shorts", "legging", "shoe", "boot"
+  "jean", "trouser", "pants", "skirt", "shorts", "legging"
 ];
 const FOOTWEAR_TYPE_MARKERS = [
   "кроссов", "кед", "ботин", "ботильон", "сапог", "туфл", "лофер", "мокасин",
   "балет", "сандал", "босонож", "шлеп", "мюл", "угг", "shoe", "boot"
 ];
 const SILHOUETTES_BY_CATEGORY = {
-  upper: [
-    "Прямой", "Свободный", "Приталенный", "Oversize", "Облегающий", "Relaxed",
-    "Широкий", "Оверсайз", "Полуприлегающий", "Слим", "Slim fit", "Regular fit",
-    "Свободный крой", "Прямой крой", "Укороченный", "Удлинённый", "Структурный",
-    "На запах", "Асимметричный"
-  ],
-  lower: [
-    "Прямой", "Свободный", "Широкий", "Облегающий", "Relaxed", "Skinny", "Slim fit",
-    "Regular fit", "Зауженный", "Расклешённый", "Клёш", "Палаццо", "Карго", "Бананы",
-    "Мом", "Бойфренд", "Высокая посадка", "Средняя посадка", "Низкая посадка",
-    "Укороченный", "Удлинённый", "Карандаш", "Трапеция", "Плиссе"
-  ],
-  onePiece: [
-    "Прямой", "Свободный", "Приталенный", "Облегающий", "А-силуэт", "Полуприлегающий",
-    "Карандаш", "Трапеция", "Солнце", "Плиссе", "Футляр", "Баллон", "Кокон", "Тюльпан",
-    "Ампир", "Принцесса", "Миди", "Макси", "Мини", "На запах", "Асимметричный"
-  ],
+  upper: ["Прямой", "Свободный", "Приталенный", "Oversize", "Облегающий", "Relaxed", "Широкий", "Оверсайз", "Полуприлегающий", "Слим", "Slim fit", "Regular fit", "Свободный крой", "Прямой крой", "Укороченный", "Удлинённый", "Структурный", "На запах", "Асимметричный"],
+  lower: ["Прямой", "Свободный", "Широкий", "Облегающий", "Relaxed", "Skinny", "Slim fit", "Regular fit", "Зауженный", "Расклешённый", "Клёш", "Палаццо", "Карго", "Бананы", "Мом", "Бойфренд", "Высокая посадка", "Средняя посадка", "Низкая посадка", "Укороченный", "Удлинённый", "Карандаш", "Трапеция", "Плиссе"],
+  onePiece: ["Прямой", "Свободный", "Приталенный", "Облегающий", "А-силуэт", "Полуприлегающий", "Карандаш", "Трапеция", "Солнце", "Плиссе", "Футляр", "Баллон", "Кокон", "Тюльпан", "Ампир", "Принцесса", "Миди", "Макси", "Мини", "На запах", "Асимметричный"],
   noSilhouette: [],
-  bag: [
-    "Тоут", "Шоппер", "Кросс-боди", "Клатч", "Сэтчел", "Хобо", "Сумка-ведро",
-    "Рюкзак", "Мини-сумка", "Структурная", "Мягкая форма", "Прямоугольная",
-    "Круглая", "Полумесяц", "Вытянутая", "Компактная", "Объёмная"
-  ],
-  scarf: [
-    "Длинный", "Короткий", "Широкий", "Узкий", "Треугольный", "Квадратный",
-    "Палантин", "Снуд", "На запах", "Объёмный", "Лёгкий", "Плотный"
-  ],
-  accessory: [
-    "Бини", "Бейсболка", "Панама", "Берет", "Кепка", "Широкополая",
-    "Длинные", "Короткие", "Высокие", "Низкие", "Широкий", "Узкий",
-    "Классический", "Компактный"
-  ]
+  bag: ["Тоут", "Шоппер", "Кросс-боди", "Клатч", "Сэтчел", "Хобо", "Сумка-ведро", "Рюкзак", "Мини-сумка", "Структурная", "Мягкая форма", "Прямоугольная", "Круглая", "Полумесяц", "Вытянутая", "Компактная", "Объёмная"],
+  scarf: ["Длинный", "Короткий", "Широкий", "Узкий", "Треугольный", "Квадратный", "Палантин", "Снуд", "На запах", "Объёмный", "Лёгкий", "Плотный"],
+  accessory: ["Бини", "Бейсболка", "Панама", "Берет", "Кепка", "Широкополая", "Длинные", "Короткие", "Высокие", "Низкие", "Широкий", "Узкий", "Классический", "Компактный"]
 };
 const CONTEXT_OPTIONS = {
   dressCode: {
@@ -295,10 +258,7 @@ function attachAutocomplete(input, list, getCandidates) {
         ? left.value.localeCompare(right.value, "ru")
         : left.score - right.score || left.value.localeCompare(right.value, "ru"))
       .slice(0, showAll && !query ? candidates.length : 7);
-    if (!matches.length) {
-      close();
-      return;
-    }
+    if (!matches.length) { close(); return; }
     activeIndex = -1;
     list.innerHTML = matches.map(({ value }, index) =>
       `<button class="autocomplete-option" type="button" role="option" id="${list.id}-option-${index}" aria-selected="false" data-suggestion="${escapeHTML(value)}">${escapeHTML(value)}</button>`
@@ -317,14 +277,11 @@ function attachAutocomplete(input, list, getCandidates) {
   input.addEventListener("blur", () => window.setTimeout(close, 120));
   input.addEventListener("keydown", (event) => {
     const options = [...list.querySelectorAll('[role="option"]')];
-    if (event.key === "Escape") {
-      close();
-    } else if (options.length && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
+    if (event.key === "Escape") close();
+    else if (options.length && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
       event.preventDefault();
       activeIndex = (activeIndex + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
-      options.forEach((option, index) => {
-        option.setAttribute("aria-selected", String(index === activeIndex));
-      });
+      options.forEach((option, index) => option.setAttribute("aria-selected", String(index === activeIndex)));
       input.setAttribute("aria-activedescendant", options[activeIndex].id);
     } else if (event.key === "Enter" && activeIndex >= 0) {
       event.preventDefault();
@@ -338,10 +295,23 @@ function attachAutocomplete(input, list, getCandidates) {
   });
 }
 
+// Универсальный резолвер фото: пробует все возможные поля,
+// ловит ошибки photoUrl, возвращает "" если фото нет.
+async function resolvePhoto(item) {
+  const raw = item?.photo || item?.image || item?.photoUrl || item?.imageUrl || "";
+  if (!raw) return "";
+  try {
+    const src = await photoUrl(raw);
+    return src || "";
+  } catch {
+    return raw;
+  }
+}
+
 async function itemCard(item) {
-  const src = await photoUrl(item.photo);
+  const src = await resolvePhoto(item);
   const photo = src
-    ? `<img src="${escapeHTML(src)}" alt="${escapeHTML(`${item.color} ${item.type}`)}" />`
+    ? `<img src="${escapeHTML(src)}" alt="${escapeHTML(`${item.color} ${item.type}`)}" loading="lazy" />`
     : `<div class="photo-placeholder">${icon("image")}</div>`;
   const seasons = (item.seasons || []).map((season) => SEASON_LABELS[season] || season).join(" · ");
   return `<article class="card item-card"><div class="item-photo">${photo}<span class="badge item-badge ${item.inLaundry ? "muted" : ""}">${item.inLaundry ? "В стирке" : escapeHTML(PARTS[item.part] || "Вещь")}</span><button class="item-menu" title="Редактировать" data-action="edit-item" data-id="${item.id}">···</button></div><div class="item-content"><h3>${escapeHTML(item.type)}</h3><div class="item-color">${escapeHTML(item.color)}${item.material ? ` · ${escapeHTML(item.material)}` : ""}</div><div class="item-chips"><span class="chip">${escapeHTML(seasons || "Все сезоны")}</span><span class="chip">${escapeHTML(item.minTemperature)}°…${escapeHTML(item.maxTemperature)}°</span></div><div class="item-footer"><span>${escapeHTML(item.dressCode || "Повседневный")}</span><button class="text-link" data-action="laundry" data-id="${item.id}" data-value="${!item.inLaundry}">${item.inLaundry ? "Готова" : "В стирку"}</button></div></div></article>`;
@@ -351,11 +321,11 @@ export async function renderWardrobe() {
   const filtered = state.wardrobe.filter((item) => {
     const matchesFilter = state.filter === "ALL" || item.part === state.filter ||
       (state.filter === "CLEAN" && !item.inLaundry) || (state.filter === "LAUNDRY" && item.inLaundry);
-    const text = `${item.type} ${item.color} ${item.material}`.toLocaleLowerCase("ru");
+    const text = `${item.type} ${item.color} ${item.material || ""}`.toLocaleLowerCase("ru");
     return matchesFilter && text.includes(state.search.toLocaleLowerCase("ru"));
   });
   const cards = await Promise.all(filtered.map(itemCard));
-  const action = `<button class="button secondary" data-action="compose-outfit">${icon("sparkle")}Собрать образ</button><button class="button" data-action="open-item">${icon("plus")}Добавить вещь</button>`;
+  const action = `<button class="button secondary" data-action="compose-outfit" type="button">${icon("sparkle")}Собрать образ</button><button class="button" data-action="open-item" type="button">${icon("plus")}Добавить вещь</button>`;
   const missing = [...new Set(state.wardrobeHintMissing || [])]
     .filter((category) => state.wardrobeStatus?.missing?.includes(category));
   const hintBanner = missing.length
@@ -363,7 +333,7 @@ export async function renderWardrobe() {
     : "";
   return shell(`${heading("Мой гардероб", `${itemCountLabel(state.wardrobe.length)} в вашей коллекции. Каждая вещь — часть будущего образа.`, action)}
     ${hintBanner}
-    <div class="toolbar"><div class="search-field">${icon("search")}<input id="wardrobe-search" placeholder="Найти вещь..." value="${escapeHTML(state.search)}" /></div><div class="filter-pills">${[["ALL", "Все"], ...Object.entries(PARTS), ["CLEAN", "Чистые"], ["LAUNDRY", "В стирке"]].map(([value, label]) => `<button class="filter-pill ${state.filter === value ? "active" : ""}" data-filter="${value}">${label}</button>`).join("")}</div></div>
+    <div class="toolbar"><div class="search-field">${icon("search")}<input id="wardrobe-search" placeholder="Найти вещь..." value="${escapeHTML(state.search)}" /></div><div class="filter-pills">${[["ALL", "Все"], ...Object.entries(PARTS), ["CLEAN", "Чистые"], ["LAUNDRY", "В стирке"]].map(([value, label]) => `<button class="filter-pill ${state.filter === value ? "active" : ""}" type="button" data-filter="${value}">${label}</button>`).join("")}</div></div>
     ${cards.length ? `<div class="wardrobe-grid">${cards.join("")}</div>` : emptyState(state.wardrobe.length ? "Ничего не найдено" : "Ваш гардероб ждёт первую вещь", state.wardrobe.length ? "Попробуйте изменить поиск или фильтр." : "Добавьте фото любимой вещи и укажите её характеристики — Clima позаботится об остальном.", state.wardrobe.length ? "" : "Добавить вещь", state.wardrobe.length ? "" : "open-item")}`);
 }
 
@@ -376,10 +346,8 @@ export function openItemForm(item = {}) {
     const value = item[name] || "";
     const options = itemOptions(name, item.type || "");
     return {
-      name,
-      label,
-      markup: `<div class="field"><label for="${id}">${label}</label><div class="autocomplete"><input id="${id}" name="${name}" required maxlength="100" value="${escapeHTML(value)}" placeholder="${placeholder}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${id}-suggestions" aria-describedby="${id}-error" /><div class="autocomplete-list" id="${id}-suggestions" role="listbox" hidden></div></div><small class="field-error" id="${id}-error" aria-live="polite"></small></div>`,
-      options
+      name, label, options,
+      markup: `<div class="field"><label for="${id}">${label}</label><div class="autocomplete"><input id="${id}" name="${name}" required maxlength="100" value="${escapeHTML(value)}" placeholder="${placeholder}" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${id}-suggestions" aria-describedby="${id}-error" /><div class="autocomplete-list" id="${id}-suggestions" role="listbox" hidden></div></div><small class="field-error" id="${id}-error" aria-live="polite"></small></div>`
     };
   });
   const textField = (name) => textFields.find((field) => field.name === name).markup;
@@ -392,19 +360,19 @@ export function openItemForm(item = {}) {
     <div class="field"><label for="item-part">Часть образа</label><select id="item-part" name="part" required aria-describedby="item-part-error"><option value="" ${item.part ? "" : "selected"} disabled>Выберите часть образа</option>${Object.entries(PARTS).map(([value, label]) => `<option value="${value}" ${item.part === value ? "selected" : ""}>${label}</option>`).join("")}</select><small class="field-hint">Футболка или свитер — «Верх», куртка, пальто или анорак — «Верхняя одежда».</small><small class="field-error" id="item-part-error" aria-live="polite"></small></div>
     ${textField("dressCode")}
     <div class="field wide"><span class="field-label">Сезоны</span><div class="season-options">${SEASONS.map((season) => `<label class="season-option"><input type="checkbox" name="seasons" value="${season}" ${checkedSeasons.includes(season) ? "checked" : ""} /><span>${SEASON_LABELS[season]}</span></label>`).join("")}</div></div>
-    <div class="field"><label for="min-temp">От, °C</label><input id="min-temp" name="minTemperature" type="number" min="-50" max="50" step="1" required value="${item.minTemperature ?? ""}" placeholder="−50…50" /><small class="field-hint">Допустимо от −50 до 50 °C</small></div>
-    <div class="field"><label for="max-temp">До, °C</label><input id="max-temp" name="maxTemperature" type="number" min="-50" max="50" step="1" required value="${item.maxTemperature ?? ""}" placeholder="−50…50" /><small class="field-hint">Допустимо от −50 до 50 °C</small></div>
+    <div class="field"><label for="min-temp">От, °C</label><input id="min-temp" name="minTemperature" type="number" min="-50" max="50" step="1" required value="${item.minTemperature ?? ""}" placeholder="−50…50" /><small class="field-hint">Допустимо от −50 до 50 °C</small><small class="field-error" id="min-temp-error" aria-live="polite"></small></div>
+    <div class="field"><label for="max-temp">До, °C</label><input id="max-temp" name="maxTemperature" type="number" min="-50" max="50" step="1" required value="${item.maxTemperature ?? ""}" placeholder="−50…50" /><small class="field-hint">Допустимо от −50 до 50 °C</small><small class="field-error" id="max-temp-error" aria-live="polite"></small></div>
     ${textField("style")}
     ${textField("material")}
     ${textField("silhouette")}
     ${isEdit ? `<div class="field"><label for="item-laundry">Стирка</label><select id="item-laundry" name="inLaundry"><option value="false" ${!item.inLaundry ? "selected" : ""}>Чистая</option><option value="true" ${item.inLaundry ? "selected" : ""}>В стирке</option></select></div>` : ""}
     </div><div class="form-errors" id="item-form-errors" role="alert" aria-live="polite"></div><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Отмена</button>${isEdit ? `<button class="button danger" type="button" data-action="delete-item" data-id="${item.id}">Удалить</button>` : ""}<button class="button" type="submit">${isEdit ? "Сохранить" : "Добавить в гардероб"}</button></div></form>`;
   const root = document.querySelector("#modal-root");
-  root.innerHTML = `<div class="modal-backdrop" data-action="backdrop"><section class="modal" role="dialog" aria-modal="true"><header class="modal-header"><div><h2>${isEdit ? "Редактировать вещь" : "Новая вещь"}</h2><p class="page-subtitle">Добавьте фото и характеристики — они помогут подобрать образ.</p></div><button class="modal-close" data-action="close-modal" aria-label="Закрыть">${icon("close")}</button></header>${form}</section></div>`;
+  root.innerHTML = `<div class="modal-backdrop" data-action="backdrop"><section class="modal" role="dialog" aria-modal="true"><header class="modal-header"><div><h2>${isEdit ? "Редактировать вещь" : "Новая вещь"}</h2><p class="page-subtitle">Добавьте фото и характеристики — они помогут подобрать образ.</p></div><button class="modal-close" type="button" data-action="close-modal" aria-label="Закрыть">${icon("close")}</button></header>${form}</section></div>`;
   const photoPreview = root.querySelector("#item-photo-preview");
   const photoPreviewImage = photoPreview.querySelector("img");
   if (item.photo) {
-    photoUrl(item.photo).then((src) => {
+    resolvePhoto(item).then((src) => {
       if (src && photoPreviewImage.isConnected && !root.querySelector("#item-photo").files.length) {
         photoPreviewImage.src = src;
       } else if (!src && photoPreviewImage.isConnected) photoPreview.hidden = true;
@@ -449,10 +417,7 @@ export function openItemForm(item = {}) {
     const id = `item-${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
     const input = root.querySelector(`#${id}`);
     input.addEventListener("input", () => {
-      const message = itemTextFieldError(
-        name, input.value.trim(), typeInput.value,
-        root.querySelector("#item-part").value
-      );
+      const message = itemTextFieldError(name, input.value.trim(), typeInput.value, root.querySelector("#item-part").value);
       input.setAttribute("aria-invalid", String(Boolean(message)));
       root.querySelector(`#${id}-error`).textContent = message;
     });
@@ -498,9 +463,7 @@ export function openItemForm(item = {}) {
     submitButton.textContent = "Сохранение…";
     try {
       if (await saveItem(event)) {
-        window.dispatchEvent(new CustomEvent("clima:item-saved", {
-          detail: { isNew: !itemForm.dataset.id }
-        }));
+        window.dispatchEvent(new CustomEvent("clima:item-saved", { detail: { isNew: !itemForm.dataset.id } }));
       }
     } catch (error) {
       showItemSaveError(itemForm, error);
@@ -518,35 +481,22 @@ function showItemSaveError(form, error) {
   const message = error.message || "Не удалось сохранить вещь.";
   const normalized = normalizeSuggestion(message);
   let target = null;
-  if (normalized.includes("фото")) {
-    target = form.querySelector(".file-drop");
-    target?.classList.add("invalid");
-  } else if (normalized.includes("сезон")) {
-    target = form.querySelector(".season-options");
-    target?.classList.add("invalid");
-  } else if (normalized.includes("температур")) {
-    target = form.querySelector(normalized.includes("максим") ? "#max-temp" : "#min-temp");
-  } else if (normalized.includes("силуэт")) {
-    target = form.elements.namedItem("silhouette");
-  } else if (normalized.includes("цвет")) {
-    target = form.elements.namedItem("color");
-  } else if (normalized.includes("тип")) {
-    target = form.elements.namedItem("type");
-  } else {
-    target = form.elements.namedItem("part");
-  }
+  if (normalized.includes("фото")) { target = form.querySelector(".file-drop"); target?.classList.add("invalid"); }
+  else if (normalized.includes("сезон")) { target = form.querySelector(".season-options"); target?.classList.add("invalid"); }
+  else if (normalized.includes("температур")) { target = form.querySelector(normalized.includes("максим") ? "#max-temp" : "#min-temp"); }
+  else if (normalized.includes("силуэт")) { target = form.elements.namedItem("silhouette"); }
+  else if (normalized.includes("цвет")) { target = form.elements.namedItem("color"); }
+  else if (normalized.includes("тип")) { target = form.elements.namedItem("type"); }
+  else { target = form.elements.namedItem("part"); }
   if (target && target.matches("input, select")) {
     target.setAttribute("aria-invalid", "true");
-    const errorElement = form.querySelector(`#${target.id}-error`) ||
-      target.closest(".field")?.querySelector(".field-error");
+    const errorElement = form.querySelector(`#${target.id}-error`) || target.closest(".field")?.querySelector(".field-error");
     if (errorElement) errorElement.textContent = message;
   }
   if (normalized.includes("некорректные характеристики")) {
-    form.querySelector("#item-form-errors").textContent =
-      "Проверьте введённые характеристики вещи. Возможно, выбранная комбинация недоступна.";
+    form.querySelector("#item-form-errors").textContent = "Проверьте введённые характеристики вещи. Возможно, выбранная комбинация недоступна.";
     form.elements.namedItem("part").setAttribute("aria-invalid", "true");
-    form.querySelector("#item-part-error").textContent =
-      "Пожалуйста, укажите корректные значения для всех полей.";
+    form.querySelector("#item-part-error").textContent = "Пожалуйста, укажите корректные значения для всех полей.";
     return;
   }
   form.querySelector("#item-form-errors").textContent = message;
@@ -578,16 +528,12 @@ export async function saveItem(event) {
   const seasons = data.getAll("seasons");
   const silhouetteApplicable = hasSilhouetteOptions(type, String(data.get("part") || ""));
   const textValues = Object.fromEntries(ITEM_TEXT_FIELDS.map(([name]) =>
-    [name, name === "silhouette" && !silhouetteApplicable
-      ? ""
-      : String(data.get(name) ?? "").trim()]
+    [name, name === "silhouette" && !silhouetteApplicable ? "" : String(data.get(name) ?? "").trim()]
   ));
-  const invalidTextFields = ITEM_TEXT_FIELDS.flatMap(([name, label]) => {
+  const invalidTextFields = ITEM_TEXT_FIELDS.flatMap(([name]) => {
     if (name === "silhouette" && !silhouetteApplicable) return [];
     const value = textValues[name];
-    const message = itemTextFieldError(
-      name, value, type, String(data.get("part") || "")
-    );
+    const message = itemTextFieldError(name, value, type, String(data.get("part") || ""));
     return message ? [{ name, message }] : [];
   });
   ITEM_TEXT_FIELDS.forEach(([name]) => {
@@ -604,9 +550,7 @@ export async function saveItem(event) {
   });
   if (invalidTextFields.length) {
     if (errors) errors.textContent = "Проверьте отмеченные поля: " +
-      invalidTextFields.map(({ name }) =>
-        ITEM_TEXT_FIELDS.find(([fieldName]) => fieldName === name)[1].toLocaleLowerCase("ru")
-      ).join(", ") + ".";
+      invalidTextFields.map(({ name }) => ITEM_TEXT_FIELDS.find(([fieldName]) => fieldName === name)[1].toLocaleLowerCase("ru")).join(", ") + ".";
     const invalidInput = form.elements.namedItem(invalidTextFields[0].name);
     invalidInput.focus();
     invalidInput.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -680,13 +624,8 @@ export async function saveItem(event) {
     return true;
   } catch (error) {
     const message = error.message || "Не удалось сохранить вещь.";
-    if (
-      !silhouetteApplicable &&
-      normalizeSuggestion(message).includes("заполните поле") &&
-      normalizeSuggestion(message).includes("силуэт")
-    ) {
-      if (errors) errors.textContent =
-        "Для этого типа вещи поле силуэта не требуется. Проверьте введённые данные.";
+    if (!silhouetteApplicable && normalizeSuggestion(message).includes("заполните поле") && normalizeSuggestion(message).includes("силуэт")) {
+      if (errors) errors.textContent = "Для этого типа вещи поле силуэта не требуется. Проверьте введённые данные.";
     } else if (errors) errors.textContent = message;
     return false;
   }

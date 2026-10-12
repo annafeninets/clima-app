@@ -18,15 +18,21 @@ export const PARTS = {
   ONE_PIECE: "Платье / комбинезон"
 };
 
+const config = (typeof window !== "undefined" && window.CLIMA_CONFIG) || {};
+const apiFromConfig = typeof config.apiBaseUrl === "string" && config.apiBaseUrl
+  ? config.apiBaseUrl
+  : "http://127.0.0.1:8000";
+
 export const state = {
-  api: (window.CLIMA_CONFIG?.apiBaseUrl || "http://127.0.0.1:8000").replace(/\/+$/, ""),
+  api: apiFromConfig.replace(/\/+$/, ""),
   token: localStorage.getItem(STORAGE_KEYS.token) || "",
   login: localStorage.getItem(STORAGE_KEYS.login) || "",
   theme: localStorage.getItem(STORAGE_KEYS.theme) || "LIGHT",
-  publicVapidKey: localStorage.getItem(STORAGE_KEYS.vapid) || window.CLIMA_CONFIG?.vapidPublicKey || "",
+  publicVapidKey: localStorage.getItem(STORAGE_KEYS.vapid) || config.vapidPublicKey || "",
   page: "home",
   outfits: [],
   wardrobe: [],
+  wardrobeStatus: { is_complete: true, missing: [] },
   favorites: [],
   history: [],
   profile: {},
@@ -39,17 +45,23 @@ export const state = {
   search: "",
   settingsTab: "profile",
   authMode: "login",
-  homeError: ""
+  homeError: "",
+  wardrobeHintMissing: []
 };
 
-const missingFromUrl = new URLSearchParams(window.location.search).get("missing");
-const wardrobeHintCategories = new Set([
-  "top", "outerwear", "bottom", "shoes", "bag", "hat", "accessories"
-]);
-state.wardrobeHintMissing = missingFromUrl
-  ? missingFromUrl.split(",").filter((category) => wardrobeHintCategories.has(category))
-  : [];
-if (state.wardrobeHintMissing.length) state.page = "wardrobe";
+// Разбор ?missing=top,shoes из URL — с защитой от отсутствия window
+try {
+  const missingFromUrl = new URLSearchParams(window.location.search).get("missing");
+  const wardrobeHintCategories = new Set([
+    "top", "outerwear", "bottom", "shoes", "bag", "hat", "accessories"
+  ]);
+  state.wardrobeHintMissing = missingFromUrl
+    ? missingFromUrl.split(",").filter((category) => wardrobeHintCategories.has(category))
+    : [];
+  if (state.wardrobeHintMissing.length) state.page = "wardrobe";
+} catch {
+  state.wardrobeHintMissing = [];
+}
 
 export function clearSession() {
   state.token = "";
