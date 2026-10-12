@@ -12,7 +12,8 @@
 // Оба пути требуют Authorization: Bearer <token> — токен берётся из state.js.
 
 import { escapeHTML } from "../ui/helpers.js";
-import { state, STORAGE_KEYS, setPlace } from "../core/state.js?v=20261008-03";
+import { state, setPlace } from "../core/state.js?v=20261008-03";
+import { request } from "../core/api.js";
 
 export function debounce(fn, delay) {
   let timeoutId = 0;
@@ -102,9 +103,15 @@ export function mountCombobox(input, options) {
     input.setAttribute("aria-expanded", "true");
   };
 
+  let selecting = false;
   const choose = (row) => {
+    selecting = true;
     input.value = row.value ?? row.title;
     input.dispatchEvent(new Event("input", { bubbles: true }));
+    selecting = false;
+    debouncedLoad.cancel?.();
+    controller?.abort();
+    requestId += 1; // отбрасываем ответы запросов, начатых до выбора
     options.onSelect?.(row.meta ?? row, row);
     close();
   };
@@ -131,6 +138,8 @@ export function mountCombobox(input, options) {
     loadSuggestions(query, query.length === 0);
   };
   const onInput = () => {
+    if (selecting) return;
+    options.onType?.();
     const query = input.value.trim();
     if (!query) loadSuggestions("", true);
     else debouncedLoad(query);
@@ -218,13 +227,6 @@ export function mountStaticCombobox(input, values, onSelect) {
 //      — для синхронизации вкладок, слушается в app.js.
 // ---------------------------------------------------------------------------
 
-function authHeaders() {
-  const headers = { Accept: "application/json" };
-  const token = state.token || localStorage.getItem(STORAGE_KEYS.token);
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
-
 // Backend заворачивает ответы в { success, message, data }.
 // Разворачиваем — сначала пробуем data.data, потом сам data.
 function extractPlaces(data) {
@@ -243,14 +245,20 @@ export function initAutocomplete(input, options = {}) {
   const combobox = mountCombobox(input, {
     debounceMs: 250,
 
+    // Пользователь правит текст вручную — прежние координаты больше не относятся к полю.
+    onType() {
+      input.dataset.lat = "";
+      input.dataset.lon = "";
+      state.selectedPlace = null;
+    },
+
     async load(query, { signal, empty }) {
       const path = empty
         ? "/places/context"
         : `/places/search?q=${encodeURIComponent(query)}&limit=20`;
 
-      const res = await fetch(path, { signal, headers: authHeaders() });
-      if (!res.ok) return [];
-      const data = await res.json();
+      // Через общий request(): учитывает state.api (в dev frontend и API на разных адресах).
+      const data = await request(path, { signal });
       return extractPlaces(data).map((place) => ({
         title: place.name || place.label || "",
         subtitle: place.region || place.country || "",

@@ -116,8 +116,7 @@ export async function renderHome() {
 export function planForm() {
   const place = state.selectedPlace;
   const occasion = state.planOccasion || "everyday";
-  const occasionTitle = occasionLabel(occasion);
-  return `<form id="plan-form" class="card weather-form"><div class="field"><label for="place">Город/место</label><div class="autocomplete"><input id="place" name="place" placeholder="Начните вводить город" value="${escapeHTML(place ? `${place.name}${place.region ? `, ${place.region}` : ""}` : state.location)}" required maxlength="200" autocomplete="off" data-lat="${escapeHTML(place?.lat ?? "")}" data-lon="${escapeHTML(place?.lon ?? "")}" /></div><small class="field-hint">При фокусе — города вашей страны; дальше — поиск по написанию.</small></div><div class="field"><label for="plan-date">Дата</label><input id="plan-date" type="date" name="date" value="${escapeHTML(state.planDate || today())}" required /></div><div class="field"><label for="occasion-input">Повод</label><div class="autocomplete"><input id="occasion-input" placeholder="Выберите или начните вводить" value="${escapeHTML(occasionTitle)}" maxlength="80" autocomplete="off" /><input type="hidden" id="occasion" name="occasion" value="${escapeHTML(occasion)}" /></div></div><button class="button" type="submit">${icon("sparkle")}Подобрать</button></form>`;
+  return `<form id="plan-form" class="card weather-form"><div class="field"><label for="place">Город/место</label><div class="autocomplete"><input id="place" name="place" placeholder="Начните вводить город" value="${escapeHTML(place ? `${place.name}${place.region ? `, ${place.region}` : ""}` : state.location)}" required maxlength="200" autocomplete="off" data-lat="${escapeHTML(place?.lat ?? "")}" data-lon="${escapeHTML(place?.lon ?? "")}" /></div><small class="field-hint">При фокусе — города вашей страны; дальше — поиск по написанию.</small></div><div class="field"><label for="plan-date">Дата</label><input id="plan-date" type="date" name="date" value="${escapeHTML(state.planDate || today())}" required /></div><div class="field"><label for="occasion">Повод</label><select id="occasion" name="occasion">${OCCASIONS.map((o) => `<option value="${o.value}"${o.value === occasion ? " selected" : ""}>${escapeHTML(o.title)}</option>`).join("")}</select></div><button class="button" type="submit">${icon("sparkle")}Подобрать</button></form>`;
 }
 
 export async function renderPlan() {
@@ -163,15 +162,8 @@ async function ensureWardrobeReady() {
     showToast("В гардеробе нет доступных вещей. Добавьте вещи в гардероб.", true);
     return false;
   }
-  const partsSet = new Set(eligible.map((item) => item.part));
-  const required = ["TOP", "BOTTOM", "SHOES"];
-  if (!required.every((part) => partsSet.has(part))) {
-    showToast(
-      "Недостаточно вещей в гардеробе для создания образа. Нужно хотя бы одно верха, низа и обуви.",
-      true
-    );
-    return false;
-  }
+  // Состав образа проверяет backend (он учитывает платья/комбинезоны и погоду),
+  // клиент блокирует только пустой гардероб.
   return true;
 }
 
@@ -202,9 +194,25 @@ export async function submitPlan(event, rerender) {
 
   // Координаты: сначала из выбранного города в автокомплите,
   // затем — из data-lat/lon самого input.
-  const place = state.selectedPlace;
-  const lat = placeInput?.dataset.lat || place?.lat;
-  const lon = placeInput?.dataset.lon || place?.lon;
+  let lat = placeInput?.dataset.lat || "";
+  let lon = placeInput?.dataset.lon || "";
+  if (!(lat && lon)) {
+    // Город набран вручную, подсказка не выбрана — берём первое совпадение поиска.
+    try {
+      const found = await request(`/places/search?q=${encodeURIComponent(params.get("place"))}&limit=1`);
+      const list = Array.isArray(found) ? found : found?.suggestions || found?.places || found?.items || [];
+      const first = list[0];
+      if (first?.name && first.lat != null && first.lon != null) {
+        setPlace(first);
+        bindPlanPlace(first);
+        params.set("place", formatLoose(first));
+        lat = String(first.lat);
+        lon = String(first.lon);
+      }
+    } catch {
+      /* без координат backend сам попробует найти город */
+    }
+  }
   if (lat && lon) {
     params.set("lat", lat);
     params.set("lon", lon);
@@ -230,6 +238,9 @@ export async function submitPlan(event, rerender) {
     }
     await rerender();
   } catch (error) {
+    // Не оставляем на экране образы прошлого запроса — они относятся к другому городу/дате.
+    state.outfits = [];
+    try { await rerender(); } catch { /* ignore */ }
     const errorMessage = String(error?.message || "").toLowerCase();
     if (
       errorMessage.includes("weather") ||
