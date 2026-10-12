@@ -26,11 +26,20 @@ class SettingsHandler(Handler):
         profileController: ProfileController,
         notificationController: NotificationController,
         cache: Cache | None = None,
+        weatherService=None,
     ):
         super().__init__(authController)
+        self.weatherService = weatherService
         self.profileController = profileController
         self.notificationController = notificationController
         self.cache = cache if cache is not None else MemoryCache()
+
+    def _verifyLocation(self, location: str) -> str:
+        """Город должен существовать для геокодера, иначе подбор образа потом падает.
+        Возвращает каноническое имя города."""
+        if self.weatherService is None:
+            return location.strip()
+        return self.weatherService.verifyPlace(location) or location.strip()
 
     def handle(self, request: Request) -> Response:
         if request.path.startswith("/auth/"):
@@ -45,9 +54,9 @@ class SettingsHandler(Handler):
                     raise ValidationError("Место должно быть строкой")
                 if not location.strip() or len(location.strip()) > 200:
                     raise ValidationError("Укажите корректное место")
+                location = self._verifyLocation(location)
             self.profileController.saveProfile(userId, preferences_from_data(request.body))
             if "location" in request.body:
-                location = request.body["location"]
                 self.profileController.setLocation(userId, location)
             return Response.ok(message="Анкета сохранена")
         if request.path == "/profile/location" and request.method == "GET":
@@ -56,6 +65,8 @@ class SettingsHandler(Handler):
             location = request.body.get("location")
             if not isinstance(location, str):
                 raise ValidationError("Место должно быть строкой")
+            self.profileController.validateLocation(location)
+            location = self._verifyLocation(location)
             self.profileController.setLocation(userId, location)
             return Response.ok({"location": location.strip()}, "Место сохранено")
         if request.path == "/settings" and request.method == "GET":

@@ -220,7 +220,11 @@ class WeatherService:
         merged: list[dict] = []
         seen: set[tuple[str, str]] = set()
         for name in seeds:
-            for place in self._searchPlaces(name, country or None, min(40, limit * 2)):
+            try:
+                found = self._searchPlaces(name, country or None, min(40, limit * 2))
+            except ServiceUnavailableError:
+                continue
+            for place in found:
                 key = place_key(place)
                 if key in seen:
                     continue
@@ -247,7 +251,14 @@ class WeatherService:
         params: dict = {"name": query, "count": min(max(limit * 2, 20), 100), "language": "ru"}
         if country_code:
             params["countryCode"] = country_code.upper()
-        geo = self._get_json(self.geocodingUrl, params)
+        geo_failed = False
+        try:
+            geo = self._get_json(self.geocodingUrl, params)
+            if not isinstance(geo, dict):
+                geo = {}
+        except (URLError, TimeoutError, OSError, ValueError, KeyError, TypeError):
+            # Геокодер недоступен — не роняем запрос (раньше был 500), пробуем запасной источник.
+            geo, geo_failed = {}, True
         places = [
             parsed for parsed in (
                 parse_open_meteo_place(item) for item in (geo.get("results") or [])
@@ -263,7 +274,12 @@ class WeatherService:
                 places.append(place)
         places.sort(key=lambda item: (-item.get("population", 0), item["name"]))
         places = places[:limit]
-        self.cache.set(key, json.dumps(places, ensure_ascii=False), PLACE_SUGGEST_TTL_SECONDS)
+        if geo_failed and not places:
+            raise ServiceUnavailableError(
+                "Поиск городов временно недоступен. Попробуйте ещё раз чуть позже."
+            )
+        if not geo_failed:  # результат при сбое источника не кэшируем
+            self.cache.set(key, json.dumps(places, ensure_ascii=False), PLACE_SUGGEST_TTL_SECONDS)
         return places
 
     def _nominatimSearch(self, query: str, country_code: str | None, limit: int) -> list[dict]:
@@ -284,6 +300,18 @@ class WeatherService:
             return []
         places = [parsed for parsed in (parse_nominatim_place(item) for item in payload) if parsed]
         return places
+
+    def verifyPlace(self, place: str) -> str:
+        """Проверяет, что геокодер знает такое место, и возвращает его каноническое имя
+        (так «amst» в профиле сохранится как «Амстердам»)."""
+        name = (place or "").strip()
+        try:
+            found = self._getLocation(name)
+            return str(found.get("name") or name).strip() or name
+        except (URLError, TimeoutError, OSError, ValueError, KeyError, TypeError) as error:
+            raise ServiceUnavailableError(
+                "Не удалось проверить город: сервис поиска недоступен. Попробуйте позже."
+            ) from error
 
     def _resolveLocation(
         self, place: str, latitude: float | None, longitude: float | None,

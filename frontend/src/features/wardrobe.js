@@ -6,7 +6,8 @@ import { emptyState, heading, shell } from "../ui/layout.js";
 const ITEM_SUGGESTIONS = {
   type: [
     "Футболка", "Поло", "Лонгслив", "Майка", "Топ", "Рубашка", "Блузка", "Туника",
-    "Корсет", "Боди", "Свитер", "Джемпер", "Пуловер", "Водолазка", "Кардиган",
+    "Корсет", "Боди", "Кофта", "Лёгкая кофта", "Тёплая кофта", "Вязаная кофта",
+    "Кофта на молнии", "Кофта с горлом", "Свитер", "Джемпер", "Пуловер", "Водолазка", "Кардиган",
     "Свитшот", "Толстовка", "Худи", "Жилет", "Пиджак", "Блейзер", "Куртка",
     "Кожаная куртка", "Косуха", "Джинсовая куртка", "Бомбер", "Ветровка", "Анорак",
     "Парка", "Пуховик", "Пальто", "Дафлкот", "Тренч", "Плащ", "Дождевик", "Пончо",
@@ -15,7 +16,7 @@ const ITEM_SUGGESTIONS = {
     "Леггинсы", "Спортивные брюки", "Комбинезон", "Кроссовки", "Кеды", "Ботинки",
     "Ботильоны", "Сапоги", "Туфли", "Лоферы", "Мокасины", "Балетки", "Сандалии",
     "Сандалии на каблуке", "Босоножки", "Шлёпанцы", "Мюли", "Угги", "Шарф", "Шапка",
-    "Перчатки", "Носки", "Колготки", "Ремень", "Сумка"
+    "Перчатки", "Носки", "Колготки", "Ремень", "Сумка", "Зонт"
   ],
   color: [
     "Белый", "Снежно-белый", "Молочный", "Слоновая кость", "Чёрный", "Угольный",
@@ -90,7 +91,7 @@ const WARDROBE_HINT_TITLES = {
 
 const TOP_TYPE_MARKERS = [
   "футболк", "поло", "лонгслив", "майк", "топ", "рубаш", "блуз", "туник", "корсет",
-  "боди", "свитер", "худи", "кардиган", "жилет", "свитшот", "толстовк", "джемпер",
+  "боди", "кофт", "свитер", "худи", "кардиган", "жилет", "свитшот", "толстовк", "джемпер",
   "пуловер", "водолазк", "футбол", "blouse", "sweater", "hoodie"
 ];
 const OUTERWEAR_TYPE_MARKERS = [
@@ -173,7 +174,7 @@ function typeCategory(type) {
   if (["сумк", "рюкзак", "клатч", "кошелек", "кошелёк", "bag"].some((marker) => normalized.includes(marker))) return "bag";
   if (FOOTWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "noSilhouette";
   if (["шарф", "scarf"].some((marker) => normalized.includes(marker))) return "scarf";
-  if (["носк", "колгот", "перчат", "рем"].some((marker) => normalized.includes(marker))) return "noSilhouette";
+  if (["носк", "колгот", "перчат", "рем", "зонт", "umbrella"].some((marker) => normalized.includes(marker))) return "noSilhouette";
   if (["шапк", "перчат", "носк", "колгот", "рем"].some((marker) => normalized.includes(marker))) return "accessory";
   if (["плать", "сарафан", "комбинезон"].some((marker) => normalized.includes(marker))) return "onePiece";
   if (OUTERWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "upper";
@@ -185,7 +186,7 @@ function typeCategory(type) {
 export function expectedPartForType(type) {
   const normalized = normalizeSuggestion(type);
   if (FOOTWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "SHOES";
-  if (["шарф", "шапк", "перчат", "носк", "колгот", "рем", "сумк", "рюкзак", "клатч", "кошелек", "кошелёк", "scarf", "bag"].some((marker) => normalized.includes(marker))) return "ACCESSORY";
+  if (["шарф", "шапк", "перчат", "носк", "колгот", "рем", "зонт", "umbrella", "сумк", "рюкзак", "клатч", "кошелек", "кошелёк", "scarf", "bag"].some((marker) => normalized.includes(marker))) return "ACCESSORY";
   if (["плать", "сарафан", "комбинезон", "dress", "jumpsuit"].some((marker) => normalized.includes(marker))) return "ONE_PIECE";
   if (OUTERWEAR_TYPE_MARKERS.some((marker) => normalized.includes(marker))) return "OUTERWEAR";
   const isTop = TOP_TYPE_MARKERS.some((marker) => normalized.includes(marker));

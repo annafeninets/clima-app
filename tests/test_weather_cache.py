@@ -96,3 +96,32 @@ class WeatherCacheTests(unittest.TestCase):
         self.assertEqual(len(places), 2)
         self.assertEqual(places[0]["name"], "Москва")
         self.assertEqual(places[0]["countryCode"], "RU")
+
+
+class PlaceSearchResilienceTests(unittest.TestCase):
+    def test_search_survives_geocoder_outage(self):
+        from urllib.error import URLError
+        from clima.errors import ServiceUnavailableError
+
+        class Down(WeatherService):
+            def _get_json(self, url, params):
+                raise URLError("down")
+
+        with self.assertRaises(ServiceUnavailableError):
+            Down().suggestPlaces("amst")
+        # без сетевых источников подсказки по пустому вводу тоже не падают
+        self.assertEqual(Down().suggestPlaces("", seed="Amsterdam"), [])
+
+    def test_search_falls_back_to_secondary_source(self):
+        from urllib.error import URLError
+
+        class Partial(WeatherService):
+            def _get_json(self, url, params):
+                if "geocoding" in url:
+                    raise URLError("down")
+                return [{"display_name": "Amsterdam", "lat": "52.37", "lon": "4.89",
+                         "type": "city", "address": {"city": "Amsterdam", "country_code": "nl",
+                                                     "country": "Netherlands"}}]
+
+        places = Partial().suggestPlaces("amst")
+        self.assertTrue(places and places[0]["name"])

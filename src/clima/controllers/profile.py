@@ -22,6 +22,13 @@ class ProfileController:
         return self._user(userId).location
 
     def setLocation(self, userId: int, location: str) -> None:
+        location = self.validateLocation(location)
+        user = self._user(userId)
+        user.location = location
+        self.usersRepository.update(user)
+
+    @staticmethod
+    def validateLocation(location: str) -> str:
         location = location.strip()
         if (
             len(location) < 2 or len(location) > 200
@@ -33,9 +40,7 @@ class ProfileController:
             )
         ):
             raise ValidationError("Укажите корректное место")
-        user = self._user(userId)
-        user.location = location
-        self.usersRepository.update(user)
+        return location
 
     def setTimeZone(self, userId: int, timeZone: str) -> None:
         if not isinstance(timeZone, str) or not timeZone.strip():

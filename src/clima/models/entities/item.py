@@ -28,7 +28,7 @@ SHOE_TYPE_MARKERS = (
     "балет", "сандал", "босонож", "шлеп", "мюл", "угг", "shoe", "boot",
 )
 NO_SILHOUETTE_TYPE_MARKERS = (
-    *SHOE_TYPE_MARKERS, "носк", "колгот", "перчат", "рем",
+    *SHOE_TYPE_MARKERS, "носк", "колгот", "перчат", "рем", "зонт", "umbrella",
 )
 ACCESSORY_TYPE_MARKERS = (
     "шарф", "шапк", "перчат", "носк", "колгот", "рем", "сумк", "рюкзак",

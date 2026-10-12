@@ -305,8 +305,9 @@ h3 { font-size: 17px; margin-bottom: 6px; }
 .item-badge { position: absolute; top: 10px; left: 10px; }
 .item-menu { position: absolute; top: 9px; right: 9px; width: 32px; height: 32px; border: 0; border-radius: 10px; background: var(--surface); cursor: pointer; }
 .item-content { padding: 14px; }
-.item-content h3 { text-transform: capitalize; margin: 0; }
-.item-color { color: var(--muted); font-size: 12px; margin: 4px 0 11px; text-transform: capitalize; }
+.item-content h3 { margin: 0; }
+.item-content h3::first-letter, .item-color::first-letter { text-transform: uppercase; }
+.item-color { color: var(--muted); font-size: 12px; margin: 4px 0 11px; }
 .item-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 11px; color: var(--muted); font-size: 11px; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .switch { appearance: none; width: 42px; height: 24px; border-radius: 20px; background: var(--line); position: relative; cursor: pointer; transition: .2s; }
@@ -563,5 +564,3 @@ h3 { font-size: 17px; margin-bottom: 6px; }
     color: #ffffff;
   }
 }
-
-

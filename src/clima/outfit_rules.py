@@ -69,6 +69,26 @@ CLOTHING_CATALOG: dict[str, dict] = {
         "markers": ("худи", "толстовк", "свитшот", "hoodie", "sweatshirt"),
         "compatible": ("bottom", "shoes", "outerwear", "accessory"),
     },
+    # Кофты: три степени тепла. Порядок важен — «тёплая/лёгкая кофта» раньше общей «кофты».
+    "light-kofta": {
+        "category": "top", "seasons": ("SPRING", "AUTUMN", "SUMMER"), "formality": 2, "warmth": 2,
+        "materials": ("cotton", "knit"),
+        "markers": ("лёгкая кофта", "легкая кофта", "тонкая кофта", "лёгкая кофт", "легкая кофт"),
+        "compatible": ("bottom", "shoes", "outerwear", "accessory"),
+    },
+    "warm-kofta": {
+        "category": "top", "seasons": ("AUTUMN", "WINTER"), "formality": 2, "warmth": 4,
+        "materials": ("wool", "fleece", "knit"),
+        "markers": ("тёплая кофта", "теплая кофта", "утеплённая кофта", "утепленная кофта",
+                    "флисовая кофта", "кофта с горлом", "тёплая кофт", "теплая кофт"),
+        "compatible": ("bottom", "shoes", "outerwear", "accessory"),
+    },
+    "kofta": {
+        "category": "top", "seasons": ("AUTUMN", "WINTER", "SPRING"), "formality": 2, "warmth": 3,
+        "materials": ("knit", "wool", "cotton"),
+        "markers": ("кофт", "вязаная кофта", "кофта на молнии"),
+        "compatible": ("bottom", "shoes", "outerwear", "accessory"),
+    },
     # Свитер: формальность 2 → 3 (не футболка, носится под пиджак)
     "sweater": {
         "category": "top", "seasons": ("AUTUMN", "WINTER", "SPRING"), "formality": 3, "warmth": 3,
@@ -311,7 +331,8 @@ BAND_RULES: dict[TemperatureBand, BandRule] = {
         "панама, очки", absolute_min=0, comfort_min=0, max=6,
         forbidden=frozenset({
             "sweater", "hoodie", "cardigan", "jacket", "coat", "down-coat", "insulated-pants",
-            "boots", "winter-boots", "hat", "gloves", "scarf",
+            "boots", "winter-boots", "hat", "gloves", "scarf", "light-kofta", "kofta",
+            "warm-kofta",
         }),
     ),
     TemperatureBand.WARM: BandRule(
@@ -319,7 +340,7 @@ BAND_RULES: dict[TemperatureBand, BandRule] = {
         absolute_min=1, comfort_min=2, max=7,
         forbidden=frozenset({
             "sweater", "coat", "down-coat", "insulated-pants", "winter-boots", "hat", "gloves",
-            "scarf",
+            "scarf", "kofta", "warm-kofta",
         }),
     ),
     TemperatureBand.MILD: BandRule(
@@ -357,17 +378,19 @@ BAND_PREFERRED: dict[TemperatureBand, frozenset[str]] = {
         "t-shirt", "shirt", "jeans", "pants", "skirt", "dress", "sneakers", "loafers", "cap",
     }),
     TemperatureBand.MILD: frozenset({
-        "shirt", "cardigan", "jacket", "jeans", "pants", "sneakers", "boots",
+        "shirt", "cardigan", "light-kofta", "kofta", "jacket", "jeans", "pants", "sneakers",
+        "boots",
     }),
     TemperatureBand.CHILLY: frozenset({
-        "sweater", "jacket", "coat", "pants", "boots", "scarf",
+        "sweater", "kofta", "warm-kofta", "jacket", "coat", "pants", "boots", "scarf",
     }),
     TemperatureBand.COLD: frozenset({
-        "sweater", "coat", "down-coat", "insulated-pants", "winter-boots", "boots", "hat",
-        "scarf", "gloves",
+        "sweater", "kofta", "warm-kofta", "coat", "down-coat", "insulated-pants",
+        "winter-boots", "boots", "hat", "scarf", "gloves",
     }),
     TemperatureBand.FREEZING: frozenset({
         "down-coat", "insulated-pants", "winter-boots", "hat", "scarf", "gloves", "sweater",
+        "warm-kofta", "kofta",
     }),
 }
 PREFERRED_BONUS = 5

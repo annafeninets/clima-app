@@ -340,6 +340,33 @@ class CatalogTests(unittest.TestCase):
         item = make("Нечто", ItemPart.SHOES, "белый")
         self.assertEqual(catalog_entry_for(item)["category"], "shoes")
 
+    def test_kofta_variants_have_different_warmth(self):
+        cases = {
+            "Кофта": ("kofta", 3), "Лёгкая кофта": ("light-kofta", 2),
+            "Тёплая кофта": ("warm-kofta", 4), "Вязаная кофта": ("kofta", 3),
+            "Кофта на молнии": ("kofta", 3), "Кофта с горлом": ("warm-kofta", 4),
+        }
+        for name, (key, warmth) in cases.items():
+            with self.subTest(type=name):
+                entry = catalog_entry_for(make(name, ItemPart.TOP, "серый"))
+                self.assertEqual((entry["key"], entry["warmth"]), (key, warmth))
+
+    def test_kofta_is_not_used_in_heat_but_used_when_chilly(self):
+        rule = CompatibilityRule()
+        items = [
+            make("Кофта", ItemPart.TOP, "серый"),
+            make("Джинсы", ItemPart.BOTTOM, "синий", material="denim"),
+            make("Кроссовки", ItemPart.SHOES, "белый"),
+        ]
+        self.assertFalse(rule.generateVariants(items, weather(33)))
+        self.assertTrue(rule.generateVariants(items, weather(14)))
+
+    def test_umbrella_is_accessory_without_silhouette(self):
+        from clima.models.entities.item import silhouette_category_for_type
+
+        self.assertEqual(catalog_entry_for(make("Зонт", ItemPart.ACCESSORY, "чёрный"))["key"], "umbrella")
+        self.assertEqual(silhouette_category_for_type("Зонт"), "noSilhouette")
+
     def test_catalog_entries_are_complete(self):
         from clima.outfit_rules import CLOTHING_CATALOG
 

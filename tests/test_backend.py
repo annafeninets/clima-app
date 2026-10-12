@@ -31,6 +31,11 @@ class FakeWeatherService(WeatherService):
     def getWeather(self, location: str) -> WeatherData:
         return self.getForecast(location, date.today())
 
+    def verifyPlace(self, place: str) -> None:
+        if place.strip().casefold() == "нигденет":
+            raise ValidationError(f"Не удалось найти место: {place}")
+        return "Москва" if place.strip().casefold() == "mosc" else place.strip()
+
 
 from support import TEST_DATABASE_URL, drop_schema, new_schema_name, requires_database
 
@@ -94,6 +99,23 @@ class BackendTests(unittest.TestCase):
             "silhouette": silhouette,
             "material": "cotton",
         }, self.token)
+
+    def test_unknown_city_is_not_saved_to_profile(self):
+        bad = self.request("PUT", "/profile/location", {"location": "Нигденет"}, self.token)
+        self.assertEqual(bad.status, 422)
+        self.assertIn("Не удалось найти место", bad.message)
+        good = self.request("PUT", "/profile/location", {"location": "Москва"}, self.token)
+        self.assertTrue(good.success, good.message)
+        canonical = self.request("PUT", "/profile/location", {"location": "mosc"}, self.token)
+        self.assertEqual(canonical.data["location"], "Москва")
+        again = self.request("PUT", "/profile", {"location": "Нигденет"}, self.token)
+        self.assertEqual(again.status, 422)
+        loc = self.request("GET", "/profile/location", token=self.token)
+        self.assertEqual(loc.data["location"], "Москва")
+
+    def test_umbrella_is_accepted_without_silhouette(self):
+        umbrella = self.add_item("Зонт", "black", "ACCESSORY", silhouette="")
+        self.assertTrue(umbrella.success, umbrella.message)
 
     def test_authentication_and_protected_routes(self):
         unauthorized = self.request("GET", "/wardrobe")
