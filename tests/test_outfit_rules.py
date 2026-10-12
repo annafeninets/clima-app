@@ -109,7 +109,7 @@ class SeasonTests(unittest.TestCase):
         self.assertEqual(season_for(date(2026, 1, 15), -33.9), Season.SUMMER)
         self.assertEqual(season_for(date(2026, 4, 15), -33.9), Season.AUTUMN)
 
-    def test_southern_city_gets_winter_clothes_in_july(self):
+    def test_card_seasons_do_not_affect_selection(self):
         rule = CompatibilityRule()
         w = wardrobe()
         winter_only = [
@@ -120,7 +120,9 @@ class SeasonTests(unittest.TestCase):
         ]
         july = date(2026, 7, 15)
         self.assertTrue(rule.generateVariants(winter_only, weather(9, lat=-33.9, day=july)))
-        self.assertFalse(rule.generateVariants(winter_only, weather(9, lat=50.0, day=july)))
+        # Сезон и диапазоны в карточках вещей больше не влияют на подбор:
+        # решает только погода из OpenWeather (9 °C), а не поле «seasons» карточки.
+        self.assertTrue(rule.generateVariants(winter_only, weather(9, lat=50.0, day=july)))
         self.assertIn(w["jeans"], w.values())
 
 

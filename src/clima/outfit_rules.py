@@ -723,8 +723,6 @@ class CompatibilityRule:
         score = 100
         facts = [(item, self._facts(item)) for item in items]
         for item, fact in facts:
-            if not item.minTemperature <= temperature <= item.maxTemperature:
-                score -= 35
             if raw_occasion and _normalize(item.dressCode) not in {
                 _normalize(raw_occasion), "any", "casual", "повседневный", occ.value, "",
             }:
@@ -828,8 +826,6 @@ class CompatibilityRule:
         candidates = [
             item for item in items
             if item.isAvailable()
-            and item.minTemperature <= weather.temperature <= item.maxTemperature
-            and (not item.seasons or season in item.seasons)
             and self._itemFitsOccasion(item, occ)
             and not self._itemConflictsWeather(item, profile)
         ]
@@ -1068,18 +1064,9 @@ class CompatibilityRule:
                 "или проверьте, не удалены ли они."
             )
 
-        # 2) Подходят по погоде и сезону?
-        season_temp_candidates = [
-            item for item in raw_candidates
-            if item.minTemperature <= weather.temperature <= item.maxTemperature
-            and (not item.seasons or season in item.seasons)
-        ]
-        if not season_temp_candidates:
-            return (
-                f"Ни одна вещь не подходит под погоду сегодня ({weather.temperature} °C). "
-                "Откройте «Гардероб», выберите вещь и расширьте диапазон температур "
-                "или добавьте её в текущий сезон."
-            )
+        # 2) Погода берётся только из OpenWeather: диапазоны температур и сезоны
+        #    в карточках вещей не участвуют в отборе (см. generateVariants).
+        season_temp_candidates = list(raw_candidates)
 
         # 3) Подходят по поводу?
         occasion_candidates = [
@@ -1146,6 +1133,20 @@ class CompatibilityRule:
                 missing.append("верх")
             if not has_bottom_a:
                 missing.append("низ")
+            # Часть есть в гардеробе, но не подходит под погоду/повод — это другая причина.
+            wrong_weather = [
+                name for name, part in (("верх", ItemPart.TOP), ("низ", ItemPart.BOTTOM))
+                if name in missing and any(
+                    i.part == part and not self._isOuterwear(i) and not self._isOnePiece(i)
+                    for i in raw_candidates
+                )
+            ]
+            if wrong_weather:
+                return (
+                    f"На {weather.temperature} °C ваш {' и '.join(wrong_weather)} "
+                    "не подходит по погоде или поводу. Добавьте вещи, которые подойдут "
+                    "к такой погоде (например, лёгкие для жары, тёплые для холода)."
+                )
 
             any_one_piece_ever = any(self._isOnePiece(i) for i in raw_candidates)
             if not any_one_piece_ever and missing:

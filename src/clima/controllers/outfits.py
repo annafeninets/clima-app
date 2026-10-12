@@ -271,12 +271,7 @@ class OutfitController:
                 self.rule._isScarf(item) for item in current_items
             ):
                 return False
-        season = self.rule._seasonFor(weather.date, weather.latitude)
-        weather_items = [
-            item for item in available
-            if item.minTemperature <= weather.temperature <= item.maxTemperature
-            and (not item.seasons or season in item.seasons)
-        ]
+        weather_items = list(available)
         if self.rule._shouldSuggestOuterwear(weather):
             available_outerwear = any(self.rule._isOuterwear(item) for item in weather_items)
             suggested_outerwear = any(

@@ -140,12 +140,16 @@ class BackendTests(unittest.TestCase):
             "POST", "/favorites", {"outfitId": outfit.id}, self.token
         )
         self.assertTrue(favorite.success)
+        # Какой из двух верхов попал в образ — зависит от погоды, поэтому меняем его на другой.
+        tops = {first_item.data.id, extra_top.data.id}
+        in_outfit = next(item.id for item in outfit.items if item.id in tops)
+        replacement = (tops - {in_outfit}).pop()
         edited = self.request(
-            "PUT", f"/favorites/{favorite.data.id}/items/{first_item.data.id}",
-            {"itemId": extra_top.data.id}, self.token,
+            "PUT", f"/favorites/{favorite.data.id}/items/{in_outfit}",
+            {"itemId": replacement}, self.token,
         )
         self.assertTrue(edited.success, edited.message)
-        self.assertIn(extra_top.data.id, [item.id for item in edited.data.items])
+        self.assertIn(replacement, [item.id for item in edited.data.items])
         listed = self.request("GET", "/favorites", token=self.token)
         self.assertEqual(len(listed.data), 1)
         removed = self.request(
