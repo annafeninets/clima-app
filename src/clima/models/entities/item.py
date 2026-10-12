@@ -148,7 +148,7 @@ class Item(OwnedEntity):
     def update(self, data: "Item") -> None:
         for name in (
             "type", "color", "seasons", "minTemperature", "maxTemperature",
-            "part", "dressCode", "style", "silhouette", "material",
+            "part", "dressCode", "style", "silhouette", "material", "inLaundry",
         ):
             setattr(self, name, getattr(data, name))
 

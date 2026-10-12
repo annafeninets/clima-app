@@ -664,13 +664,13 @@ export async function saveItem(event) {
       type, color, part: data.get("part"), seasons,
       minTemperature: minimum, maxTemperature: maximum,
       dressCode: textValues.dressCode, style: textValues.style,
-      material: textValues.material, silhouette: textValues.silhouette
+      material: textValues.material, silhouette: textValues.silhouette,
+      inLaundry: data.get("inLaundry") === "true"
     };
     if (card.minTemperature > card.maxTemperature) throw new Error("Минимальная температура выше максимальной");
     if (id) {
       await request(`/wardrobe/items/${id}`, { method: "PUT", body: card });
       if (photo) await request(`/wardrobe/items/${id}/photo`, { method: "PUT", body: { photo } });
-      await request(`/wardrobe/items/${id}/laundry`, { method: "PUT", body: { value: data.get("inLaundry") === "true" } });
     } else {
       // Один запрос: фото (base64) сохраняется только вместе с карточкой — без сиротских файлов.
       await request("/wardrobe/items/draft", { method: "PUT", body: { ...card, photo } });

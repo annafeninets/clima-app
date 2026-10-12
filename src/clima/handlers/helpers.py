@@ -53,7 +53,7 @@ def item_from_data(data: dict, userId: int, existing: Item | None = None) -> Ite
         style=_string_value(values, "style", base.style),
         silhouette=silhouette,
         material=_string_value(values, "material", base.material),
-        inLaundry=base.inLaundry, deleted=base.deleted,
+        inLaundry=(values["inLaundry"] if isinstance(values.get("inLaundry"), bool) else base.inLaundry), deleted=base.deleted,
     )
 
 
