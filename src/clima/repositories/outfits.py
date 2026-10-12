@@ -104,7 +104,8 @@ class OutfitsRepository(Repository[Outfit]):
         item_rows = self.db.query(
             """SELECT oi.outfit_id, i.* FROM outfit_items oi
                JOIN items i ON i.id = oi.item_id
-               WHERE oi.outfit_id = ANY(%s) ORDER BY i.id""",
+               WHERE oi.outfit_id = ANY(%s) AND NOT i.deleted
+               ORDER BY i.id""",
             ([row["id"] for row in rows],),
         )
         items = defaultdict(list)

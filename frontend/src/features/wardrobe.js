@@ -673,8 +673,7 @@ export async function saveItem(event) {
       if (photo) await request(`/wardrobe/items/${id}/photo`, { method: "PUT", body: { photo } });
       await request(`/wardrobe/items/${id}/laundry`, { method: "PUT", body: { value: data.get("inLaundry") === "true" } });
     } else {
-      const draft = await request("/wardrobe/items", { method: "POST", body: { photo } });
-      await request("/wardrobe/items/draft", { method: "PUT", body: { ...card, photo: draft.photo } });
+      await request("/wardrobe/items/draft", { method: "PUT", body: { ...card, photo } });
     }
     document.querySelector("#modal-root").innerHTML = "";
     showToast(id ? "Изменения сохранены" : "Вещь добавлена в гардероб");

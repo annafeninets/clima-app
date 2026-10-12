@@ -70,8 +70,12 @@ class WardrobeController:
 
     def deleteItem(self, userId: int, itemId: int) -> None:
         item = self._ownedItem(userId, itemId)
+        photo = item.photo
         item.markDeleted()
+        item.setPhoto("")
         self.itemsRepository.update(item)
+        if photo:
+            self.photoStorage.delete(photo)
 
     def markInLaundry(self, userId: int, itemId: int, value: bool) -> None:
         item = self._ownedItem(userId, itemId)
