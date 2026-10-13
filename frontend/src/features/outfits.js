@@ -242,11 +242,24 @@ export async function renderFavorites() {
 export async function renderHistory() {
   state.history = await request("/outfits/history");
   const toRate = await request("/outfits/rate");
-  const uniqueHistory = dedupeOutfits(state.history);
-  const uniqueToRate = dedupeOutfits(toRate);
-  const cards = await Promise.all(uniqueHistory.map((outfit) => outfitCard(outfit, null, false)));
-  const ratingCards = await Promise.all(uniqueToRate.map((outfit) => outfitCard(outfit, null, false)));
-  return shell(`${heading("История образов", "Все образы, которые вы выбирали. Оценки помогут персонализировать рекомендации.")}${uniqueToRate.length ? `<div class="section-title"><div><h2>Оцените недавнее</h2><p class="page-subtitle">Как вам эти образы?</p></div></div><div class="outfit-grid" style="margin-bottom:30px">${ratingCards.join("")}</div>` : ""}${uniqueHistory.length ? `<div class="section-title"><div><h2>Выходы</h2><p class="page-subtitle">${itemCountLabel(uniqueHistory.length)} сохранено в истории</p></div></div><div class="outfit-grid">${cards.join("")}</div>` : emptyState("История пока пуста", "Когда выберете образ, он появится здесь.", "Подобрать образ", "go-plan")}`);
+  // Подтягиваем избранное, чтобы у каждой карточки в истории
+  // кнопка «Сохранить» была в правильном состоянии (закрашена/нет).
+  if (!state.favorites?.length) {
+    try { state.favorites = await request("/favorites"); }
+    catch { state.favorites = []; }
+  }
+  const favoriteByOutfitId = new Map(
+    (state.favorites || []).map((favorite) => [favorite.outfitId ?? favorite.outfit?.id ?? favorite.id, favorite])
+  );
+
+  const cards = await Promise.all(
+    state.history.map((outfit) => outfitCard(outfit, favoriteByOutfitId.get(outfit.id) || null, false))
+  );
+  const ratingCards = await Promise.all(
+    toRate.map((outfit) => outfitCard(outfit, favoriteByOutfitId.get(outfit.id) || null, false))
+  );
+
+  return shell(`${heading("История образов", "Все образы, которые вы выбирали. Оценки помогут персонализировать рекомендации.")}${toRate.length ? `<div class="section-title"><div><h2>Оцените недавнее</h2><p class="page-subtitle">Как вам эти образы?</p></div></div><div class="outfit-grid" style="margin-bottom:30px">${ratingCards.join("")}</div>` : ""}${cards.length ? `<div class="section-title"><div><h2>Выходы</h2><p class="page-subtitle">${itemCountLabel(cards.length)} сохранено в истории</p></div></div><div class="outfit-grid">${cards.join("")}</div>` : emptyState("История пока пуста", "Когда выберете образ, он появится здесь.", "Подобрать образ", "go-plan")}`);
 }
 
 async function ensureWardrobeReady() {
