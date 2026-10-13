@@ -87,17 +87,26 @@ function profileField(name, label, value, placeholder, wide = false) {
 
 export async function renderSettings() {
   [state.profile, state.settings] = await Promise.all([request("/profile"), request("/settings")]);
-  state.theme = state.settings.theme || state.theme;
-  localStorage.setItem(STORAGE_KEYS.theme, state.theme);
-  document.documentElement.dataset.theme = state.theme;
+
+  // Тема: приоритет у локального состояния — то, что пользователь выбрал в UI.
+  // localStorage всегда важнее backend'а. Backend используется только как
+  // fallback при первой загрузке, когда localStorage ещё пуст.
+  const storedTheme = localStorage.getItem(STORAGE_KEYS.theme);
+  const backendTheme = state.settings.theme || state.theme || "LIGHT";
+  const effectiveTheme = storedTheme || backendTheme;
+
+  state.theme = effectiveTheme;
+  state.settings.theme = effectiveTheme;
+  localStorage.setItem(STORAGE_KEYS.theme, effectiveTheme);
+  document.documentElement.dataset.theme = effectiveTheme;
 
   const tabs = [["profile", "Профиль и стиль"], ["notifications", "Уведомления"], ["appearance", "Внешний вид"], ["account", "Аккаунт"]];
   let panel = "";
   if (state.settingsTab === "profile") {
-        const locationValue = state.selectedPlace
-          ? `${state.selectedPlace.name}${state.selectedPlace.region ? `, ${state.selectedPlace.region}` : ""}`
-          : state.location;
-        panel = `<h2>О вас и вашем стиле</h2><p class="page-subtitle">Эти данные помогают выбирать сочетания, которые нравятся именно вам.</p><form id="profile-form" class="form-grid" novalidate>${profileField("location", "Город/место", locationValue, "Например, Санкт-Петербург", true)}${profileField("style", "Стиль", state.profile.style, "Например, casual, минимализм")}${profileField("colors", "Любимые цвета", state.profile.colors, "Например, зелёный, бежевый")}${profileField("sizes", "Размеры", state.profile.sizes, "Например, M, 38")}${profileField("bodyFeatures", "Предпочтительный силуэт", state.profile.bodyFeatures, "Например, прямой, свободный")}<div class="form-errors wide" id="profile-form-errors" role="alert" aria-live="polite"></div><div class="wide"><button class="button" type="submit">Сохранить изменения</button></div></form>`;
+    const locationValue = state.selectedPlace
+      ? `${state.selectedPlace.name}${state.selectedPlace.region ? `, ${state.selectedPlace.region}` : ""}`
+      : state.location;
+    panel = `<h2>О вас и вашем стиле</h2><p class="page-subtitle">Эти данные помогают выбирать сочетания, которые нравятся именно вам.</p><form id="profile-form" class="form-grid" novalidate>${profileField("location", "Город/место", locationValue, "Например, Санкт-Петербург", true)}${profileField("style", "Стиль", state.profile.style, "Например, casual, минимализм")}${profileField("colors", "Любимые цвета", state.profile.colors, "Например, зелёный, бежевый")}${profileField("sizes", "Размеры", state.profile.sizes, "Например, M, 38")}${profileField("bodyFeatures", "Предпочтительный силуэт", state.profile.bodyFeatures, "Например, прямой, свободный")}<div class="form-errors wide" id="profile-form-errors" role="alert" aria-live="polite"></div><div class="wide"><button class="button" type="submit">Сохранить изменения</button></div></form>`;
   } else if (state.settingsTab === "notifications") {
     const detectedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
     const savedTimeZone = localStorage.getItem(STORAGE_KEYS.timeZone);
