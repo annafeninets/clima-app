@@ -41,6 +41,23 @@ async function render() {
     return;
   }
 
+  // Один раз за сессию — синхронизируем тему с backend, если localStorage пуст.
+  // Локальный выбор пользователя имеет приоритет над серверным.
+  if (!state._themeSynced) {
+    state._themeSynced = true;
+    try {
+      const remote = await request("/settings");
+      const stored = localStorage.getItem(STORAGE_KEYS.theme);
+      if (!stored && remote?.theme) {
+        state.theme = remote.theme;
+        localStorage.setItem(STORAGE_KEYS.theme, remote.theme);
+        document.documentElement.dataset.theme = remote.theme;
+      }
+    } catch {
+      // silent — если упадёт, работаем с локальной темой
+    }
+  }
+
   app.innerHTML = `<div class="loading"><span class="spinner"></span></div>`;
   try {
     const locationResponse = await request("/profile/location");
@@ -241,20 +258,25 @@ document.addEventListener("click", async (event) => {
     state.settingsTab = target.dataset.settingsTab;
     await render();
   } else if (target.matches("[data-theme-set]")) {
-    try {
-      await request("/settings/theme", { method: "PUT", body: { theme: target.dataset.themeSet } });
-      state.theme = target.dataset.themeSet;
-      localStorage.setItem(STORAGE_KEYS.theme, state.theme);
-      await render();
-    } catch (error) { showToast(error.message, true); }
+    const theme = target.dataset.themeSet;
+    // Мгновенно применяем локально — интерфейс не ждёт backend
+    state.theme = theme;
+    localStorage.setItem(STORAGE_KEYS.theme, theme);
+    document.documentElement.dataset.theme = theme;
+    // Тихо синхронизируем с сервером, не блокируя UI
+    request("/settings/theme", { method: "PUT", body: { theme } }).catch(() => {});
+    // Перерисовываем, чтобы обновить активный pill и иконку
+    await render();
   } else if (target.matches(".theme-toggle")) {
-    try {
-      const theme = state.theme === "DARK" ? "LIGHT" : "DARK";
-      await request("/settings/theme", { method: "PUT", body: { theme } });
-      state.theme = theme;
-      localStorage.setItem(STORAGE_KEYS.theme, theme);
-      await render();
-    } catch (error) { showToast(error.message, true); }
+    const theme = state.theme === "DARK" ? "LIGHT" : "DARK";
+    // Мгновенно применяем локально
+    state.theme = theme;
+    localStorage.setItem(STORAGE_KEYS.theme, theme);
+    document.documentElement.dataset.theme = theme;
+    // Тихо синхронизируем с сервером, не блокируя UI
+    request("/settings/theme", { method: "PUT", body: { theme } }).catch(() => {});
+    // Перерисовываем — чтобы иконка солнце ⇄ луна обновилась
+    await render();
   } else if (target.matches(".logout")) {
     await logout();
     clearSession();

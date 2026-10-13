@@ -66,9 +66,17 @@ try {
 export function clearSession() {
   state.token = "";
   state.login = "";
+  state._themeSynced = false;
   localStorage.removeItem(STORAGE_KEYS.token);
   localStorage.removeItem(STORAGE_KEYS.login);
   localStorage.removeItem(STORAGE_KEYS.timeZone);
+  // Тема — пользовательская настройка, не привязана к сессии.
+  // Восстанавливаем её из localStorage после выхода.
+  const savedTheme = localStorage.getItem(STORAGE_KEYS.theme);
+  if (savedTheme) {
+    state.theme = savedTheme;
+    document.documentElement.dataset.theme = savedTheme;
+  }
 }
 
 export function saveSession(token, login) {
