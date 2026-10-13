@@ -161,10 +161,14 @@ svg {
   display: flex; align-items: center; justify-content: center;
   color: #5C2430;
 }
-.hero .fan-circle svg {
+.fan-circle svg {
   width: 30px;
   height: 30px;
-  display: block;
+  fill: none;
+  stroke: var(--wine);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .hero .fan-circle svg .north {
   fill: #B8838F;
@@ -1666,4 +1670,190 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
   .page-heading h1 { font-size: 26px; }
   .card { padding: 18px; }
   .button { padding: 12px 20px; font-size: 9px; }
+}
+
+/* ─── Auth: левая половина ─── */
+.auth-visual {
+  /* уже есть в твоём CSS, оставляем как есть */
+}
+
+.auth-message {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 3vw, 40px);
+  /* ключевое: блок не выходит за пределы своей половины,
+     сжимается первым, если места мало */
+  width: 100%;
+  max-width: 100%;
+  padding-right: clamp(16px, 4vw, 64px);
+}
+
+.auth-message-text {
+  /* без фиксированной ширины — забирает всё свободное место,
+     но может ужиматься до нуля */
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ─── Заголовок слогана: масштабируется вместе с окном ─── */
+.auth-message h1 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-style: normal;
+  color: var(--cream);
+  line-height: 1.08;
+  letter-spacing: -0.5px;
+  margin: 0 0 clamp(10px, 1.5vw, 20px);
+  /* font-size зависит от ширины окна:
+     - минимум 24px (мобильный)
+     - оптимум 3.6vw (между 375 и 1600)
+     - максимум 64px (большие мониторы) */
+  font-size: clamp(24px, 3.6vw, 64px);
+}
+
+.auth-message h1 em {
+  font-style: italic;
+}
+
+/* ─── Подзаголовок: тоже масштабируется, но скромнее ─── */
+.auth-message p {
+  font-family: var(--font-sans);
+  font-weight: 300;
+  color: var(--cream);
+  opacity: 0.75;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 44ch;
+  font-size: clamp(12px, 1vw, 15px);
+}
+
+/* ─── Монограмма: масштабируется вместе с текстом ─── */
+.auth-monogram {
+  flex: 0 0 auto;
+  /* размер тянется между 100 и 200 px вместе с окном */
+  width: clamp(100px, 12vw, 200px);
+  height: clamp(100px, 12vw, 200px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-monogram svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.auth-monogram-ring {
+  fill: none;
+  stroke: rgba(216, 167, 177, 0.35);
+  stroke-width: 0.8;
+}
+
+.auth-monogram-letter {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  fill: var(--rose);
+  /* размер относительно viewBox SVG, чтобы буква всегда
+     была ~50% от диаметра кольца */
+  font-size: 96px;
+}
+
+.auth-monogram-dot {
+  fill: var(--rose);
+}
+
+/* ─── На средних экранах: монограмма над слоганом ─── */
+@media (max-width: 1200px) {
+  .auth-message {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: clamp(14px, 2vw, 24px);
+    padding-right: 0;
+  }
+  .auth-message h1 {
+    font-size: clamp(22px, 4vw, 40px);
+  }
+}
+
+/* ─── На узких экранах: ещё компактнее ─── */
+@media (max-width: 768px) {
+  .auth-message h1 {
+    font-size: clamp(20px, 5.5vw, 30px);
+  }
+  .auth-message p {
+    font-size: clamp(11px, 2.2vw, 13px);
+  }
+}
+
+/* ==========================================================================
+   Auth inputs — принудительно перекрываем стили автозаполнения браузера
+   (Chrome/Safari применяют свой синий фон к :autofill и игнорируют background,
+   поэтому перекрываем через box-shadow inset)
+   ========================================================================== */
+
+/* Все состояния фокуса и автозаполнения в auth-форме */
+.auth-form input,
+.auth-field input,
+#auth-login,
+#auth-password,
+#auth-confirm {
+  /* базовый фон остаётся cream */
+  background-color: var(--surface-muted) !important;
+  color: var(--wine) !important;
+  /* убираем ВСЕ outline, которые браузер рисует сам */
+  outline: none !important;
+  transition: box-shadow 0.15s, background-color 0.15s;
+}
+
+/* focus: розовое свечение */
+.auth-form input:focus,
+.auth-field input:focus,
+#auth-login:focus,
+#auth-password:focus,
+#auth-confirm:focus {
+  outline: none !important;
+  border-color: var(--rose) !important;
+  box-shadow: 0 0 0 3px rgba(216, 167, 177, 0.28) !important;
+  background-color: var(--surface-muted) !important;
+}
+
+/* Autofill — перебиваем синий фон браузера через inset box-shadow,
+   потому что background-color браузер в этом состоянии ИГНОРИРУЕТ */
+.auth-form input:-webkit-autofill,
+.auth-form input:-webkit-autofill:hover,
+.auth-form input:-webkit-autofill:focus,
+.auth-form input:-webkit-autofill:active,
+.auth-field input:-webkit-autofill,
+#auth-login:-webkit-autofill,
+#auth-password:-webkit-autofill,
+#auth-confirm:-webkit-autofill,
+#auth-login:-webkit-autofill:focus,
+#auth-password:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--wine) !important;
+  -webkit-box-shadow: 0 0 0 1000px #FBF3EE inset !important;
+          box-shadow: 0 0 0 1000px #FBF3EE inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+  outline: none !important;
+  border-color: var(--rose) !important;
+}
+
+/* Firefox autofill */
+.auth-form input:autofill,
+#auth-login:autofill,
+#auth-password:autofill {
+  -moz-appearance: none;
+  background-color: #FBF3EE !important;
+  color: var(--wine) !important;
+}
+
+/* Тёмная тема: то же самое, но с wine-фоном */
+[data-theme="DARK"] .auth-form input:-webkit-autofill,
+[data-theme="DARK"] #auth-login:-webkit-autofill,
+[data-theme="DARK"] #auth-password:-webkit-autofill {
+  -webkit-text-fill-color: var(--cream) !important;
+  -webkit-box-shadow: 0 0 0 1000px #3A1A22 inset !important;
+          box-shadow: 0 0 0 1000px #3A1A22 inset !important;
 }

@@ -145,17 +145,21 @@ function hero() {
   <div class="bg-overlay" aria-hidden="true"></div>
   <div class="bg-gradient" aria-hidden="true"></div>
 
-  <div class="hero-badge">Редакция · Clima 2026</div>
+  <div class="hero-badge">ГАРМОНИЯ С ПОГОДОЙ · Clima 2026</div>
 
   <div class="fan-circle" aria-hidden="true">
-    <svg viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="9" fill="none" stroke="#800000" stroke-width="1.4"/>
-      <path class="north" d="M12 3 14 10 12 12 10 10Z" fill="none" stroke="#800000" stroke-width="1.4"/>
-      <path d="M12 21 10 14 12 12 14 14Z" fill="none" stroke="#800000" stroke-width="1.4"/>
-      <path d="M3 12 10 10 12 12 10 14Z" fill="none" stroke="#800000" stroke-width="1.4"/>
-      <path d="M21 12 14 14 12 12 14 10Z" fill="none" stroke="#800000" stroke-width="1.4"/>
-    </svg>
-  </div>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- внешний круг -->
+    <circle cx="12" cy="12" r="9"/>
+    <!-- четыре луча компаса -->
+    <path d="M12 4v3M12 17v3M4 12h3M17 12h3"/>
+    <!-- ромбовидная стрелка — только контуром -->
+    <path d="M12 8.5 14 12 12 15.5 10 12Z"/>
+    <!-- центральная точка -->
+    <circle cx="12" cy="12" r="0.6" fill="currentColor"/>
+  </svg>
+</div>
 
   <div class="hero-content-block">
     <h1>Хороший день <em>начинается</em> с образа</h1>

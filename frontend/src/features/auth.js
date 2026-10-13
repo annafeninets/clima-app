@@ -13,10 +13,26 @@ export function renderAuth() {
           <div class="brand-caption">style by weather</div>
         </div>
       </div>
+
       <div class="auth-message">
-        <h1>Погода меняется. <em>Стиль</em> остаётся.</h1>
-        <p>Ваш личный гардероб, подобранные по погоде образы и немного больше уверенности каждое утро.</p>
+        <div class="auth-monogram" aria-hidden="true">
+          <svg viewBox="0 0 200 200">
+            <circle class="auth-monogram-ring" cx="100" cy="100" r="92" />
+            <text class="auth-monogram-letter" x="100" y="100"
+                  text-anchor="middle"
+                  dominant-baseline="central">C</text>
+            <circle class="auth-monogram-dot" cx="100" cy="8" r="2" />
+            <circle class="auth-monogram-dot" cx="100" cy="192" r="2" />
+            <circle class="auth-monogram-dot" cx="8" cy="100" r="2" />
+            <circle class="auth-monogram-dot" cx="192" cy="100" r="2" />
+          </svg>
+        </div>
+        <div class="auth-message-text">
+          <h1>Погода меняется. <em>Стиль</em> остаётся.</h1>
+          <p>Ваш личный гардероб, подобранные по погоде образы и немного больше уверенности каждое утро.</p>
+        </div>
       </div>
+
       <div class="auth-quote">Персональный стилист, который знает ваш гардероб.</div>
     </section>
     <section class="auth-form-side">
